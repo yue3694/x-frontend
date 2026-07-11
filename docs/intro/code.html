@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NEURAL_LOG // 陈傲 个人档案</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+        :root {
+            --primary-glow: rgba(173, 198, 255, 0.3);
+            --secondary-glow: rgba(221, 183, 255, 0.2);
+            --cursor-x: 50%;
+            --cursor-y: 50%;
+        }
+
+        body, html {
+            background-color: #051424;
+            color: #d4e4fa;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        /* Custom Cursor Glow */
+        .cursor-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+            background: radial-gradient(
+                circle 200px at var(--cursor-x) var(--cursor-y),
+                rgba(173, 198, 255, 0.05),
+                transparent 80%
+            );
+        }
+
+        /* WebGL Background */
+        #glcanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .scroll-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            position: relative;
+            z-index: 10;
+        }
+
+        .snap-section {
+            scroll-snap-align: start;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding-top: 5rem;
+            padding-bottom: 2rem;
+        }
+
+        .glass-card {
+            backdrop-filter: blur(12px);
+            background: rgba(5, 20, 36, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card:hover {
+            border-color: #adc6ff;
+            box-shadow: 0 0 20px rgba(173, 198, 255, 0.15);
+        }
+
+        /* Scanning Line Animation */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent,
+                rgba(173, 198, 255, 0.2) 50%,
+                transparent
+            );
+            transform: translateY(-100%);
+            animation: scanLine 3s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes scanLine {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .terminal-text {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* Scroll Progress */
+        .scroll-progress-container {
+            position: fixed;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 100;
+        }
+
+        .progress-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .progress-dot.active {
+            background: #adc6ff;
+            transform: scale(1.5);
+            box-shadow: 0 0 10px #adc6ff;
+        }
+
+        /* Entry Animations */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        /* Stagger delays */
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
+
+        .timeline-line {
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #adc6ff, #ddb7ff, #4cd7f6);
+            opacity: 0.3;
+        }
+
+        /* Three.js Container */
+        #three-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150%;
+            height: 150%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        /* Particle styling */
+        .particle {
+            position: fixed;
+            background: rgba(173, 198, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: float 10s infinite linear;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) scale(1); opacity: 0; }
+        }
+    </style>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-background": "#d4e4fa",
+                "surface-container": "#122131",
+                "primary-fixed-dim": "#adc6ff",
+                "on-secondary": "#490080",
+                "inverse-on-surface": "#233143",
+                "surface-bright": "#2c3a4c",
+                "on-surface": "#d4e4fa",
+                "inverse-surface": "#d4e4fa",
+                "surface-tint": "#adc6ff",
+                "secondary-fixed": "#f0dbff",
+                "on-secondary-container": "#d6a9ff",
+                "on-tertiary-container": "#002f38",
+                "on-primary": "#002e6a",
+                "tertiary-container": "#009eb9",
+                "on-tertiary": "#003640",
+                "tertiary-fixed-dim": "#4cd7f6",
+                "surface-dim": "#051424",
+                "secondary": "#ddb7ff",
+                "background": "#051424",
+                "surface-container-high": "#1c2b3c",
+                "outline-variant": "#424754",
+                "on-error": "#690005",
+                "error": "#ffb4ab",
+                "on-tertiary-fixed": "#001f26",
+                "primary": "#adc6ff",
+                "on-primary-container": "#00285d",
+                "surface-container-highest": "#273647",
+                "surface-variant": "#273647",
+                "on-error-container": "#ffdad6",
+                "on-primary-fixed-variant": "#004395",
+                "on-surface-variant": "#c2c6d6",
+                "inverse-primary": "#005ac2",
+                "primary-fixed": "#d8e2ff",
+                "secondary-container": "#6f00be",
+                "secondary-fixed-dim": "#ddb7ff",
+                "on-primary-fixed": "#001a42",
+                "tertiary": "#4cd7f6",
+                "on-secondary-fixed-variant": "#6900b3",
+                "surface-container-low": "#0d1c2d",
+                "surface": "#051424",
+                "on-tertiary-fixed-variant": "#004e5c",
+                "surface-container-lowest": "#010f1f",
+                "tertiary-fixed": "#acedff",
+                "primary-container": "#4d8eff",
+                "on-secondary-fixed": "#2c0051",
+                "outline": "#8c909f",
+                "error-container": "#93000a",
+                "success-green": "#4ade80"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "stack-md": "16px",
+                "stack-sm": "8px",
+                "stack-lg": "32px",
+                "margin-mobile": "16px",
+                "unit": "4px",
+                "margin-desktop": "40px",
+                "gutter": "24px",
+                "container-max": "1200px"
+        },
+        "fontFamily": {
+                "headline-lg-mobile": [
+                        "JetBrains Mono"
+                ],
+                "code-sm": [
+                        "JetBrains Mono"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "label-caps": [
+                        "JetBrains Mono"
+                ],
+                "headline-lg": [
+                        "JetBrains Mono"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-xl": [
+                        "JetBrains Mono"
+                ],
+                "headline-md": [
+                        "JetBrains Mono"
+                ]
+        }
+},
+    },
+  }
+</script>
+</head>
+<body class="selection:bg-primary selection:text-surface">
+<div class="cursor-glow"></div>
+<canvas id="glcanvas"></canvas>
+<!-- Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/10 shadow-[0_0_15px_rgba(173,198,255,0.15)]">
+<div class="flex justify-between items-center px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="font-headline-md text-2xl font-bold tracking-tighter text-primary">NEURAL_LOG</div>
+<div class="hidden md:flex gap-8">
+<a class="font-label-caps text-xs text-primary border-b-2 border-primary pb-1" href="#section1">核心模块</a>
+<a class="font-label-caps text-xs text-on-surface-variant hover:text-primary transition-colors" href="#section2">技能矩阵</a>
+<a class="font-label-caps text-xs text-on-surface-variant hover:text-primary transition-colors" href="#section3">精选项目</a>
+<a class="font-label-caps text-xs text-on-surface-variant hover:text-primary transition-colors" href="#section4">系统日志</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-variant/30 rounded-full border border-white/5 hidden sm:flex">
+<span class="w-2 h-2 bg-success-green rounded-full pulse-dot"></span>
+<span class="font-code-sm text-xs text-on-surface-variant">API: 在线</span>
+</div>
+</div>
+</div>
+</nav>
+<!-- Scroll Progress -->
+<div class="scroll-progress-container hidden md:flex">
+<div class="progress-dot active" data-target="section1" title="Identity Core"></div>
+<div class="progress-dot" data-target="section2" title="Skill Matrix"></div>
+<div class="progress-dot" data-target="section3" title="Projects"></div>
+<div class="progress-dot" data-target="section4" title="System Logs"></div>
+</div>
+<!-- Main Scroll Container -->
+<main class="scroll-container" id="scrollContainer">
+<!-- Section 1: Identity Core -->
+<section class="snap-section px-margin-mobile md:px-margin-desktop" id="section1">
+<div class="max-w-6xl w-full mx-auto animate-on-scroll">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter items-center relative p-8 md:p-12 rounded-2xl glass-card">
+<div class="scan-line"></div>
+<div class="md:col-span-5 flex justify-center relative">
+<div id="three-container"></div>
+<div class="relative group z-10">
+<div class="absolute -inset-2 bg-gradient-to-r from-primary to-secondary rounded-full blur-xl opacity-30 group-hover:opacity-60 transition duration-1000"></div>
+<div class="relative w-56 h-56 md:w-64 md:h-64 rounded-full border-4 border-primary/20 overflow-hidden bg-surface-container">
+<img alt="Alex Chen Portrait" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCy745EVMp5XoyoOkKwJTNSvKHLWV9l3X59lAwOdlMcGY6dqPAoMLq6OWnthefp2SVr9aq7UovtqFWemskBonMG79b8pxRPSj__l8HzA2DaG94FOjnFzGCubuQ9ISmcYqwbtMOHPSTZEM1KhgPfkRCJiFR4OPwcXU-og7I1LHLzr9tQ18KdKZy1dbNxkr29757yZeEd3ItWvPQgTPCiAFG3ATnLeZqCL_F4o-kxuQ2ACCtJ4TpGJSIE"/>
+</div>
+<div class="absolute -bottom-4 -right-4 bg-surface p-3 rounded-xl border border-primary/30 shadow-[0_0_15px_rgba(173,198,255,0.2)]">
+<div class="font-code-sm text-xs text-primary flex items-center gap-2">
+<span class="w-2 h-2 bg-primary rounded-full pulse-dot"></span> UPTIME: 99.9%
+                                </div>
+</div>
+</div>
+</div>
+<div class="md:col-span-7 space-y-6 text-center md:text-left mt-8 md:mt-0 z-10">
+<div class="inline-block px-4 py-1.5 bg-primary/10 border border-primary/30 rounded-full mb-2 animate-on-scroll delay-100">
+<span class="font-label-caps text-xs text-primary tracking-widest uppercase">系统初始化: 运行良好</span>
+</div>
+<h1 class="font-headline-xl text-5xl md:text-6xl text-on-surface font-bold tracking-tight animate-on-scroll delay-100">陈傲 <span class="text-on-surface-variant font-light">(Alex Chen)</span></h1>
+<p class="font-headline-md text-xl md:text-2xl text-primary font-medium mb-1 animate-on-scroll delay-200">首席 AI 工程师 // 全栈系统架构师</p>
+<p class="font-body-lg text-lg text-secondary opacity-90 italic animate-on-scroll delay-200">"将生物学意图与合成智能相融合" (Merging Biological Intent with Synthetic Intelligence)</p>
+<div class="flex flex-wrap gap-4 justify-center md:justify-start mt-4 animate-on-scroll delay-300">
+<div class="flex items-center gap-2 text-on-surface-variant font-code-sm text-sm">
+<span class="material-symbols-outlined text-[16px]">mail</span> alex@neural_log.ai
+                                </div>
+<div class="flex items-center gap-2 text-on-surface-variant font-code-sm text-sm">
+<span class="material-symbols-outlined text-[16px]">location_on</span> 硅谷，加利福尼亚
+                                </div>
+<div class="flex items-center gap-2 text-success-green font-code-sm text-sm">
+<span class="material-symbols-outlined text-[16px]">check_circle</span> 接受新项目
+                                </div>
+</div>
+<!-- System Metrics -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-white/10 mt-6 animate-on-scroll delay-300 relative overflow-hidden">
+<div class="scan-line"></div>
+<div>
+<div class="font-label-caps text-xs text-on-surface-variant uppercase mb-1">代码行数</div>
+<div class="font-headline-lg text-2xl text-primary">1.2M+</div>
+</div>
+<div>
+<div class="font-label-caps text-xs text-on-surface-variant uppercase mb-1">训练 Epochs</div>
+<div class="font-headline-lg text-2xl text-secondary">50k+</div>
+</div>
+<div>
+<div class="font-label-caps text-xs text-on-surface-variant uppercase mb-1">部署 Agent</div>
+<div class="font-headline-lg text-2xl text-tertiary">120+</div>
+</div>
+<div>
+<div class="font-label-caps text-xs text-on-surface-variant uppercase mb-1">推理成本优化</div>
+<div class="font-headline-lg text-2xl text-success-green">-45%</div>
+</div>
+</div>
+<div class="flex flex-wrap gap-4 justify-center md:justify-start pt-6 animate-on-scroll delay-300">
+<button class="px-6 py-3 bg-primary text-surface font-label-caps text-sm font-bold rounded-lg hover:bg-primary-container transition-colors">
+                                建立连接 [CONNECT]
+                            </button>
+<div class="flex gap-2">
+<a class="w-12 h-12 rounded-lg border border-white/10 flex items-center justify-center hover:border-primary hover:text-primary transition-all text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="code">code</span>
+</a>
+<a class="w-12 h-12 rounded-lg border border-white/10 flex items-center justify-center hover:border-tertiary hover:text-tertiary transition-all text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Skill Matrix -->
+<section class="snap-section px-margin-mobile md:px-margin-desktop" id="section2">
+<div class="max-w-6xl w-full mx-auto">
+<div class="mb-8 text-center animate-on-scroll">
+<h2 class="font-headline-lg text-3xl md:text-4xl text-on-surface mb-2">技能矩阵 <span class="text-primary opacity-50">//</span> <span class="text-lg font-light text-on-surface-variant">TECHNOLOGY STACK</span></h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- AI Core -->
+<div class="glass-card p-6 rounded-xl space-y-6 animate-on-scroll delay-100">
+<div class="scan-line"></div>
+<div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-4"><span class="material-symbols-outlined text-secondary text-2xl">psychology</span><h3 class="font-headline-md text-lg text-secondary">AI 核心 (AI Core)</h3></div><div class="space-y-6"><div><div class="flex justify-between items-end mb-2"><span class="font-label-caps text-sm text-on-surface">Python / PyTorch</span><span class="font-code-sm text-xs text-on-surface-variant">Sync Rate: 98%</span></div><div class="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative"><div class="scan-line"></div><div class="h-full bg-gradient-to-r from-secondary to-primary w-[98%] rounded-full shadow-[0_0_10px_#ddb7ff]"></div></div><div class="flex flex-wrap gap-1.5"><span class="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">CUDA</span><span class="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">Distributed Training</span><span class="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">Kernels</span></div></div><div><div class="flex justify-between items-end mb-2"><span class="font-label-caps text-sm text-on-surface">Agent 开发 (LangChain)</span><span class="font-code-sm text-xs text-on-surface-variant">Sync Rate: 95%</span></div><div class="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative"><div class="scan-line"></div><div class="h-full bg-gradient-to-r from-secondary to-primary w-[95%] rounded-full"></div></div><div class="flex flex-wrap gap-1.5"><span class="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">AutoGPT</span><span class="text-[10px] px-1.5 py-0.5 bg-secondary/10 text-secondary rounded border border-secondary/20">Multi-Agent</span></div></div><div class="pt-2 border-t border-white/5"><div class="text-[10px] font-label-caps text-on-surface-variant uppercase mb-1">Core Mastery</div><div class="text-xs text-on-surface opacity-80">大规模语言模型分布式预训练与推理优化</div></div></div></div>
+<!-- Full-Stack -->
+<div class="glass-card p-6 rounded-xl space-y-6 animate-on-scroll delay-200">
+<div class="scan-line"></div>
+<div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-4"><span class="material-symbols-outlined text-tertiary text-2xl">dns</span><h3 class="font-headline-md text-lg text-tertiary">全栈 (Full-Stack)</h3></div><div class="space-y-6"><div><div class="flex justify-between items-end mb-2"><span class="font-label-caps text-sm text-on-surface">Go / Microservices</span><span class="font-code-sm text-xs text-on-surface-variant">Sync Rate: 96%</span></div><div class="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative"><div class="scan-line"></div><div class="h-full bg-gradient-to-r from-tertiary to-primary w-[96%] rounded-full shadow-[0_0_10px_#4cd7f6]"></div></div><div class="flex flex-wrap gap-1.5"><span class="text-[10px] px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded border border-tertiary/20">gRPC</span><span class="text-[10px] px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded border border-tertiary/20">K8s</span><span class="text-[10px] px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded border border-tertiary/20">Redis</span></div></div><div><div class="flex justify-between items-end mb-2"><span class="font-label-caps text-sm text-on-surface">TS / React / Node</span><span class="font-code-sm text-xs text-on-surface-variant">Sync Rate: 90%</span></div><div class="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative"><div class="scan-line"></div><div class="h-full bg-gradient-to-r from-tertiary to-primary w-[90%] rounded-full"></div></div><div class="flex flex-wrap gap-1.5"><span class="text-[10px] px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded border border-tertiary/20">Next.js</span><span class="text-[10px] px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded border border-tertiary/20">WebSockets</span></div></div><div class="pt-2 border-t border-white/5"><div class="text-[10px] font-label-caps text-on-surface-variant uppercase mb-1">Core Mastery</div><div class="text-xs text-on-surface opacity-80">高并发实时数据流处理与云原生架构演进</div></div></div></div>
+<!-- AI Product & Design -->
+<div class="glass-card p-6 rounded-xl space-y-6 animate-on-scroll delay-300">
+<div class="scan-line"></div>
+<div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-4"><span class="material-symbols-outlined text-primary text-2xl">design_services</span><h3 class="font-headline-md text-lg text-primary">产品 &amp; 设计 (Product)</h3></div><div class="space-y-6"><div><div class="flex justify-between items-end mb-2"><span class="font-label-caps text-sm text-on-surface">LLM UX / Prompt Eng</span><span class="font-code-sm text-xs text-on-surface-variant">Sync Rate: 97%</span></div><div class="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative"><div class="scan-line"></div><div class="h-full bg-gradient-to-r from-primary to-secondary w-[97%] rounded-full shadow-[0_0_10px_#adc6ff]"></div></div><div class="flex flex-wrap gap-1.5"><span class="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">Chain-of-Thought</span><span class="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">RAG</span></div></div><div><div class="flex justify-between items-end mb-2"><span class="font-label-caps text-sm text-on-surface">AI 产品策略</span><span class="font-code-sm text-xs text-on-surface-variant">Sync Rate: 89%</span></div><div class="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative"><div class="scan-line"></div><div class="h-full bg-gradient-to-r from-primary to-secondary w-[89%] rounded-full"></div></div><div class="flex flex-wrap gap-1.5"><span class="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">Market Fit</span><span class="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">Agentic Ops</span></div></div><div class="pt-2 border-t border-white/5"><div class="text-[10px] font-label-caps text-on-surface-variant uppercase mb-1">Core Mastery</div><div class="text-xs text-on-surface opacity-80">以智能体为核心的下一代人机交互范式定义</div></div></div></div>
+</div>
+</div>
+</section>
+<!-- Section 3: Featured Projects -->
+<section class="snap-section px-margin-mobile md:px-margin-desktop" id="section3">
+<div class="max-w-6xl w-full mx-auto">
+<div class="mb-10 text-center animate-on-scroll">
+<h2 class="font-headline-lg text-3xl md:text-4xl text-on-surface mb-2">精选项目 <span class="text-tertiary opacity-50">//</span> <span class="text-lg font-light text-on-surface-variant">DEPLOYED SYSTEMS</span></h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Project 1: Technical -->
+<div class="glass-card p-6 rounded-xl space-y-4 hover:border-tertiary/50 group animate-on-scroll delay-100 flex flex-col h-full"><div class="scan-line"></div><div class="flex justify-between items-start"><div class="flex items-center gap-2 text-tertiary"><span class="material-symbols-outlined">security</span><h3 class="font-headline-md text-lg font-bold">NeuralSentinel V4</h3></div><span class="px-2 py-1 bg-surface-container rounded text-[10px] font-code-sm text-on-surface-variant border border-white/5">v4.2.0</span></div><div class="space-y-4 flex-grow"><p class="font-body-md text-sm text-on-surface-variant">高性能分布式威胁检测模型，针对边缘计算环境深度优化。</p><div class="space-y-2"><div class="text-[10px] font-label-caps text-tertiary uppercase">Implementation Logic</div><p class="text-xs text-on-surface/70 leading-relaxed">采用知识蒸馏技术将大型 Transformer 压缩至轻量级边缘模型，结合 Go 编写的高并发数据采集引擎。</p></div><div class="space-y-2"><div class="text-[10px] font-label-caps text-tertiary uppercase">Tech Stack</div><div class="flex flex-wrap gap-1.5"><span class="px-1.5 py-0.5 bg-tertiary/10 text-tertiary text-[10px] rounded">PyTorch</span><span class="px-1.5 py-0.5 bg-tertiary/10 text-tertiary text-[10px] rounded">TensorRT</span><span class="px-1.5 py-0.5 bg-tertiary/10 text-tertiary text-[10px] rounded">Go</span><span class="px-1.5 py-0.5 bg-tertiary/10 text-tertiary text-[10px] rounded">eBPF</span></div></div></div><div class="pt-4 border-t border-white/10"><div class="font-code-sm text-xs text-success-green bg-success-green/10 p-2 rounded flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span><span>Core Achievement: 推理延迟降低 40% (20ms -&gt; 12ms)</span></div></div></div>
+<!-- Project 2: AI Design/Frontend -->
+<div class="glass-card p-6 rounded-xl space-y-4 hover:border-primary/50 group animate-on-scroll delay-200 flex flex-col h-full"><div class="scan-line"></div><div class="flex justify-between items-start"><div class="flex items-center gap-2 text-primary"><span class="material-symbols-outlined">web_asset</span><h3 class="font-headline-md text-lg font-bold">Neural UI</h3></div><span class="px-2 py-1 bg-surface-container rounded text-[10px] font-code-sm text-on-surface-variant border border-white/5">v1.5.0</span></div><div class="space-y-4 flex-grow"><p class="font-body-md text-sm text-on-surface-variant">专为 Agentic Workflows 设计的前端组件库与设计系统。</p><div class="space-y-2"><div class="text-[10px] font-label-caps text-primary uppercase">Implementation Logic</div><p class="text-xs text-on-surface/70 leading-relaxed">基于 React Server Components 构建，实现流式 Token 渲染优化与智能体思维链 (CoT) 的可视化组件。</p></div><div class="space-y-2"><div class="text-[10px] font-label-caps text-primary uppercase">Tech Stack</div><div class="flex flex-wrap gap-1.5"><span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded">React 18</span><span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded">Tailwind</span><span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded">Framer Motion</span><span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded">Zustand</span></div></div></div><div class="pt-4 border-t border-white/10"><div class="font-code-sm text-xs text-success-green bg-success-green/10 p-2 rounded flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span><span>Core Achievement: Agent UI 开发速度提升 60%</span></div></div></div>
+<!-- Project 3: AI Product -->
+<div class="glass-card p-6 rounded-xl space-y-4 hover:border-secondary/50 group animate-on-scroll delay-300 flex flex-col h-full"><div class="scan-line"></div><div class="flex justify-between items-start"><div class="flex items-center gap-2 text-secondary"><span class="material-symbols-outlined">storefront</span><h3 class="font-headline-md text-lg font-bold">AgentMarket</h3></div><span class="px-2 py-1 bg-surface-container rounded text-[10px] font-code-sm text-on-surface-variant border border-white/5">v2.1.5</span></div><div class="space-y-4 flex-grow"><p class="font-body-md text-sm text-on-surface-variant">去中心化的 AI 智能体交易市场，支持自动 API 路由。</p><div class="space-y-2"><div class="text-[10px] font-label-caps text-secondary uppercase">Implementation Logic</div><p class="text-xs text-on-surface/70 leading-relaxed">利用智能合约处理 Agent 授权，后端采用 Node.js 集群配合 LangChain 实现动态 Prompt 注入与计费。</p></div><div class="space-y-2"><div class="text-[10px] font-label-caps text-secondary uppercase">Tech Stack</div><div class="flex flex-wrap gap-1.5"><span class="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded">Solidity</span><span class="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded">Node.js</span><span class="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded">LangChain</span><span class="px-1.5 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded">PostgreSQL</span></div></div></div><div class="pt-4 border-t border-white/10"><div class="font-code-sm text-xs text-success-green bg-success-green/10 p-2 rounded flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span><span>Core Achievement: 活跃智能体部署超 10,000+</span></div></div></div>
+</div>
+</div>
+</section>
+<!-- Section 4: System Logs & Timeline -->
+<section class="snap-section px-margin-mobile md:px-margin-desktop pb-10" id="section4">
+<div class="max-w-4xl w-full mx-auto">
+<div class="mb-10 text-center animate-on-scroll">
+<h2 class="font-headline-lg text-3xl md:text-4xl text-on-surface mb-2">系统日志 <span class="text-primary opacity-50">//</span> <span class="text-lg font-light text-on-surface-variant">EXECUTION TRACE</span></h2>
+</div>
+<div class="glass-card rounded-xl overflow-hidden animate-on-scroll delay-100 h-[60vh] flex flex-col">
+<div class="scan-line"></div>
+<div class="bg-surface-variant/50 px-6 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-error"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+<div class="w-3 h-3 rounded-full bg-success-green"></div>
+</div>
+<div class="font-code-sm text-xs text-on-surface-variant">tail -f /var/log/career.log</div>
+</div>
+<div class="p-6 md:p-8 overflow-y-auto terminal-text text-sm relative flex-grow">
+<div class="timeline-line"></div>
+<div class="space-y-10">
+<!-- Entry 1 -->
+<div class="relative pl-10 animate-on-scroll delay-100">
+<div class="absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_10px_#adc6ff] z-10"></div>
+<div class="text-primary font-bold mb-1">[RUNTIME] 2023 - 至今</div>
+<div class="text-on-surface text-lg font-bold mb-1">AI 产品设计负责人 @ Synth_Corp</div>
+<div class="text-on-surface-variant mb-3 font-body-md text-xs bg-surface-container inline-block px-2 py-1 rounded border border-white/5">AI UI/UX / 产品策略</div>
+<p class="text-on-surface-variant leading-relaxed opacity-80">
+                                    &gt; 领导多模态交互界面的设计与开发工作。<br/>
+                                    &gt; 制定 Agentic 系统的产品迭代路线图。<br/>
+                                    &gt; 统筹全栈工程团队与设计团队协同，落地 Neural UI。
+                                </p>
+</div>
+<!-- Entry 2 -->
+<div class="relative pl-10 animate-on-scroll delay-200">
+<div class="absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary z-10"></div>
+<div class="text-primary font-bold mb-1">[RUNTIME] 2021 - 2023</div>
+<div class="text-on-surface text-lg font-bold mb-1">首席 AI 架构师 @ Neural Corp</div>
+<div class="text-on-surface-variant mb-3 font-body-md text-xs bg-surface-container inline-block px-2 py-1 rounded border border-white/5">工业级大模型部署 / 分布式系统</div>
+<p class="text-on-surface-variant leading-relaxed opacity-80">
+                                    &gt; 架构并扩展了万卡级别的分布式 LLM 推理集群。<br/>
+                                    &gt; 领导 'Project Aegis' 的开发，一个高度自主的 DevOps Agent。<br/>
+                                    &gt; 研发自定义 CUDA 算子，在不损失精度的情况下将核心模型延迟降低 45%。
+                                </p>
+</div>
+<!-- Neural Upgrade 1 -->
+<div class="relative pl-10 animate-on-scroll delay-300">
+<div class="absolute left-[9px] top-1.5 w-3 h-3 rounded-sm bg-secondary rotate-45 z-10"></div>
+<div class="text-secondary font-bold mb-1">[CORE_SYS_FLASH] 2021</div>
+<div class="text-on-surface text-lg font-bold mb-1">人工智能理学硕士 (MS in AI) @ 斯坦福大学 (Stanford University)</div>
+<p class="text-on-surface-variant leading-relaxed opacity-80">
+                                    &gt; 研究方向：多模态表征学习与强化学习。<br/>
+                                    &gt; 系统核心升级完成，知识库扩容成功。
+                                </p>
+</div>
+<!-- Entry 3 -->
+<div class="relative pl-10 animate-on-scroll delay-100">
+<div class="absolute left-[12px] top-1.5 w-2 h-2 rounded-full bg-tertiary z-10"></div>
+<div class="text-tertiary font-bold mb-1">[LEGACY_SYS] 2019 - 2021</div>
+<div class="text-on-surface text-lg font-bold mb-1">全栈开发工程师 @ CyberTech</div>
+<div class="text-on-surface-variant mb-3 font-body-md text-xs bg-surface-container inline-block px-2 py-1 rounded border border-white/5">微服务架构 / 实时数据处理</div>
+<p class="text-on-surface-variant leading-relaxed opacity-80">
+                                    &gt; 架构了用于实时威胁检测的高并发 React/Node.js 仪表板。<br/>
+                                    &gt; 实现并维护服务于每日 1000 万次以上请求的 GraphQL API 层。<br/>
+                                    &gt; 主导将核心遗留单体架构平滑过渡到基于 Go 的云原生微服务体系。
+                                </p>
+</div>
+<!-- Neural Upgrade 2 -->
+<div class="relative pl-10 animate-on-scroll delay-200">
+<div class="absolute left-[9px] top-1.5 w-3 h-3 rounded-sm bg-outline rotate-45 z-10"></div>
+<div class="text-outline font-bold mb-1">[CORE_SYS_INIT] 2019</div>
+<div class="text-on-surface text-lg font-bold mb-1">计算机科学学士 (BS in CS) @ 麻省理工学院 (MIT)</div>
+<p class="text-on-surface-variant leading-relaxed opacity-80">
+                                    &gt; 基础架构模块初始化完成。<br/>
+                                    &gt; 算法与数据结构基底烧录完毕。
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<script>
+        // WebGL Background Shader
+        const canvas = document.getElementById('glcanvas');
+        const gl = canvas.getContext('webgl');
+
+        if (gl) {
+            const vertexShaderSource = `
+                attribute vec2 position;
+                varying vec2 v_texCoord;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0);
+                    v_texCoord = position * 0.5 + 0.5;
+                }
+            `;
+
+            const fragmentShaderSource = `
+                precision highp float;
+                uniform float u_time;
+                uniform vec2 u_resolution;
+                uniform vec2 u_mouse;
+                varying vec2 v_texCoord;
+
+                float hash(vec2 p) {
+                    p = fract(p * vec2(123.34, 456.21));
+                    p += dot(p, p + 45.32);
+                    return fract(p.x * p.y);
+                }
+
+                void main() {
+                    vec2 uv = v_texCoord;
+                    vec2 p = uv * 2.0 - 1.0;
+                    p.x *= u_resolution.x / u_resolution.y;
+                    
+                    // Background deep blue
+                    vec3 color = vec3(0.02, 0.08, 0.14);
+                    
+                    // Grid lines
+                    vec2 grid = fract(uv * 15.0 - u_time * 0.05);
+                    float lines = smoothstep(0.0, 0.02, grid.x) * smoothstep(1.0, 0.98, grid.x);
+                    lines += smoothstep(0.0, 0.02, grid.y) * smoothstep(1.0, 0.98, grid.y);
+                    color += lines * 0.02 * vec3(0.23, 0.51, 0.96);
+                    
+                    // Digital rain / Pulse effect
+                    float t = u_time * 0.5;
+                    for(float i=0.0; i<3.0; i++) {
+                        vec2 sp = uv * (10.0 + i * 5.0);
+                        float h = hash(floor(sp));
+                        float drop = smoothstep(0.9, 1.0, fract(sp.y - t * (h + 0.5)));
+                        color += drop * 0.1 * vec3(0.23, 0.51, 0.96) * h;
+                    }
+                    
+                    // Mouse glow
+                    vec2 m = u_mouse / u_resolution;
+                    float dist = distance(uv, m);
+                    color += (1.0 - smoothstep(0.0, 0.4, dist)) * 0.15 * vec3(0.23, 0.51, 0.96);
+                    
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
+
+            function createShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error(gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            }
+
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(program));
+            }
+
+            gl.useProgram(program);
+
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            const positions = new Float32Array([
+                -1.0, -1.0,
+                 1.0, -1.0,
+                -1.0,  1.0,
+                -1.0,  1.0,
+                 1.0, -1.0,
+                 1.0,  1.0,
+            ]);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+            const positionLocation = gl.getAttribLocation(program, "position");
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            const timeLocation = gl.getUniformLocation(program, "u_time");
+            const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+            const mouseLocation = gl.getUniformLocation(program, "u_mouse");
+
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = window.innerHeight - e.clientY;
+            });
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+
+            function render(time) {
+                time *= 0.001;
+                gl.uniform1f(timeLocation, time);
+                gl.uniform2f(mouseLocation, mouseX, mouseY);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                requestAnimationFrame(render);
+            }
+            requestAnimationFrame(render);
+        }
+
+        // Three.js Identity Core
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('three-container');
+            if (container) {
+                const width = container.clientWidth || window.innerWidth;
+                const height = container.clientHeight || window.innerHeight;
+
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                container.appendChild(renderer.domElement);
+
+                // Create a Neural Hub geometry
+                const group = new THREE.Group();
+                scene.add(group);
+
+                // Core sphere
+                const coreGeom = new THREE.IcosahedronGeometry(1.5, 2);
+                const coreMat = new THREE.MeshPhongMaterial({
+                    color: 0x3b82f6,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.8,
+                    emissive: 0x1d4ed8,
+                    emissiveIntensity: 0.5
+                });
+                const core = new THREE.Mesh(coreGeom, coreMat);
+                group.add(core);
+
+                // Inner solid sphere for glow
+                const innerGeom = new THREE.IcosahedronGeometry(0.8, 1);
+                const innerMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+                const inner = new THREE.Mesh(innerGeom, innerMat);
+                group.add(inner);
+
+                // Floating particles
+                const particlesCount = 100;
+                const positions = new Float32Array(particlesCount * 3);
+                for (let i = 0; i < particlesCount; i++) {
+                    const r = 2.5 + Math.random() * 2;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI;
+                    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                    positions[i * 3 + 2] = r * Math.cos(phi);
+                }
+                const partGeom = new THREE.BufferGeometry();
+                partGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const partMat = new THREE.PointsMaterial({ color: 0x3b82f6, size: 0.05, transparent: true, opacity: 0.6 });
+                const points = new THREE.Points(partGeom, partMat);
+                group.add(points);
+
+                // Lights
+                const light = new THREE.PointLight(0xffffff, 1, 100);
+                light.position.set(5, 5, 5);
+                scene.add(light);
+                scene.add(new THREE.AmbientLight(0x404040));
+
+                camera.position.z = 6;
+
+                // Mouse Interaction
+                let mX = 0, mY = 0;
+                window.addEventListener('mousemove', (e) => {
+                    mX = (e.clientX - window.innerWidth / 2) / 100;
+                    mY = (e.clientY - window.innerHeight / 2) / 100;
+                });
+
+                function animateThree() {
+                    requestAnimationFrame(animateThree);
+                    
+                    group.rotation.y += 0.005;
+                    group.rotation.x += 0.002;
+                    
+                    // Smooth follow mouse
+                    group.position.x += (mX - group.position.x) * 0.05;
+                    group.position.y += (-mY - group.position.y) * 0.05;
+                    
+                    // Pulse effect
+                    const pulse = 1 + Math.sin(Date.now() * 0.002) * 0.05;
+                    core.scale.set(pulse, pulse, pulse);
+                    
+                    renderer.render(scene, camera);
+                }
+
+                window.addEventListener('resize', () => {
+                    const w = container.clientWidth || window.innerWidth;
+                    const h = container.clientHeight || window.innerHeight;
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                });
+
+                animateThree();
+            }
+
+            // Custom Cursor Logic
+            document.addEventListener('mousemove', (e) => {
+                document.documentElement.style.setProperty('--cursor-x', e.clientX + 'px');
+                document.documentElement.style.setProperty('--cursor-y', e.clientY + 'px');
+            });
+
+            // Micro-particles generator
+            function createParticles() {
+                const body = document.body;
+                for(let i=0; i<20; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.style.left = Math.random() * 100 + 'vw';
+                    p.style.width = Math.random() * 3 + 1 + 'px';
+                    p.style.height = p.style.width;
+                    p.style.animationDuration = Math.random() * 10 + 5 + 's';
+                    p.style.animationDelay = Math.random() * 5 + 's';
+                    body.appendChild(p);
+                }
+            }
+            createParticles();
+
+            const containerScroll = document.getElementById('scrollContainer');
+            const sections = document.querySelectorAll('.snap-section');
+            const dots = document.querySelectorAll('.progress-dot');
+            const animatedElements = document.querySelectorAll('.animate-on-scroll');
+
+            // Setup Intersection Observer for Animations and Scroll Dots
+            const observerOptions = {
+                root: containerScroll,
+                threshold: 0.2
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Update dots
+                        const targetId = entry.target.id;
+                        dots.forEach(dot => {
+                            if (dot.getAttribute('data-target') === targetId) {
+                                dot.classList.add('active');
+                            } else {
+                                dot.classList.remove('active');
+                            }
+                        });
+
+                        // Trigger animations within the section
+                        const animElements = entry.target.querySelectorAll('.animate-on-scroll');
+                        animElements.forEach((el, index) => {
+                            setTimeout(() => {
+                                el.classList.add('is-visible');
+                            }, index * 50); // Additional stagger for all elements inside
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+
+            // Click dots to scroll
+            dots.forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const targetId = dot.getAttribute('data-target');
+                    const targetSection = document.getElementById(targetId);
+                    if (targetSection) {
+                        containerScroll.scrollTo({
+                            top: targetSection.offsetTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // Initial animation for section 1
+            setTimeout(() => {
+                document.getElementById('section1')?.querySelectorAll('.animate-on-scroll').forEach(el => {
+                    el.classList.add('is-visible');
+                });
+            }, 100);
+        });
+    </script>
+</body></html>
