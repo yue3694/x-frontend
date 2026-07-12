@@ -2,7 +2,7 @@
 
 ## 概述
 
-为 Neural Synthesis 项目添加路由保护层：Next.js middleware 拦截受保护路由，未登录重定向到 `/auth?next=<原 URL>`；已登录访问 `/auth` 重定向到 `/profile`；简介页 nav 登出按钮调 oRPC `auth.logout` 后清 cookie 并跳 `/auth`。这是 02.profile-page 的前置安全屏障（即便 page.tsx 已 redirect，middleware 提供更早的拦截与更好的 URL 干净度）。
+为 X-FRONTEND 项目添加路由保护层：Next.js middleware 拦截受保护路由，未登录重定向到 `/auth?next=<原 URL>`；已登录访问 `/auth` 重定向到 `/profile`；简介页 nav 登出按钮调 oRPC `auth.logout` 后清 cookie 并跳 `/auth`。这是 02.profile-page 的前置安全屏障（即便 page.tsx 已 redirect，middleware 提供更早的拦截与更好的 URL 干净度）。
 
 ## 项目信息
 

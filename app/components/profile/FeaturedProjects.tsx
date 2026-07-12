@@ -8,7 +8,7 @@ export function FeaturedProjects({ projects }: { projects: Project[] }) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {projects.map((p, i) => (
         <RevealOnScroll key={p.title} delay={100 * (i + 1)}>
-          <div className="glass-card p-6 rounded-xl space-y-4 hover:border-tertiary/50 group flex flex-col h-full">
+          <div className={`glass-card p-6 rounded-xl space-y-4 ${hoverBorder(p.highlight)} group flex flex-col h-full`}>
             <div className="scan-line" />
             <div className="flex justify-between items-start">
               <div className={`flex items-center gap-2 ${accentColor(p.highlight)}`}>
@@ -71,5 +71,14 @@ function tagStyle(c: string): string {
     case "secondary": return "bg-secondary/10 text-secondary";
     case "tertiary": return "bg-tertiary/10 text-tertiary";
     default: return "bg-white/5 text-on-surface-variant";
+  }
+}
+
+function hoverBorder(c: string): string {
+  switch (c) {
+    case "primary": return "hover:border-primary/50";
+    case "secondary": return "hover:border-secondary/50";
+    case "tertiary": return "hover:border-tertiary/50";
+    default: return "hover:border-white/20";
   }
 }

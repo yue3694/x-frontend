@@ -21,7 +21,7 @@ export function LandingNav({ user }: { user: SessionUser | null }) {
   return (
     <nav className="app-nav">
       <Link href="/" className="brand">
-        NEURAL SYNTHESIS
+        X-FRONTEND
       </Link>
       <div className="flex items-center gap-4">
         {user ? (

@@ -14,21 +14,21 @@ export function SkillMatrix({ categories }: { categories: Category[] }) {
               <span className={`material-symbols-outlined text-2xl ${catColor(c.color)}`}>
                 {c.icon}
               </span>
-              <h3 className={`font-mono text-lg ${catColor(c.color)}`}>{c.category}</h3>
+              <h3 className={`font-headline-md text-lg ${catColor(c.color)}`}>{c.category}</h3>
             </div>
             <div className="space-y-6">
-              {c.items.map((it) => (
+              {c.items.map((it, idx) => (
                 <div key={it.name}>
                   <div className="flex justify-between items-end mb-2">
-                    <span className="font-mono text-sm text-on-surface">{it.name}</span>
-                    <span className="font-mono text-xs text-on-surface-variant">
+                    <span className="font-label-caps text-sm text-on-surface">{it.name}</span>
+                    <span className="font-code-sm text-xs text-on-surface-variant">
                       Sync Rate: {it.syncRate}%
                     </span>
                   </div>
                   <div className="h-1.5 bg-surface-container rounded-full overflow-hidden mb-2 relative">
                     <div className="scan-line" />
                     <div
-                      className={`h-full rounded-full ${progressColor(c.color)}`}
+                      className={`h-full rounded-full ${progressColor(c.color)} ${idx === 0 ? progressShadow(c.color) : ""}`}
                       style={{ width: `${it.syncRate}%` }}
                     />
                   </div>
@@ -45,10 +45,10 @@ export function SkillMatrix({ categories }: { categories: Category[] }) {
                 </div>
               ))}
               <div className="pt-2 border-t border-white/5">
-                <div className="text-[10px] font-mono text-on-surface-variant uppercase mb-1">
+                <div className="text-[10px] font-label-caps text-on-surface-variant uppercase mb-1">
                   Core Mastery
                 </div>
-                <div className="text-xs text-on-surface opacity-80">{c.masteryNote}</div>
+                <div className="font-body-md text-xs text-on-surface opacity-80">{c.masteryNote}</div>
               </div>
             </div>
           </div>
@@ -73,6 +73,16 @@ function progressColor(c: string): string {
     case "secondary": return "bg-gradient-to-r from-secondary to-primary";
     case "tertiary": return "bg-gradient-to-r from-tertiary to-primary";
     default: return "bg-primary";
+  }
+}
+
+function progressShadow(c: string): string {
+  // Design only applies glow to the first skill of each category.
+  switch (c) {
+    case "secondary": return "shadow-glow-secondary";
+    case "tertiary": return "shadow-glow-tertiary";
+    case "primary": return "shadow-glow-primary";
+    default: return "";
   }
 }
 

@@ -2,7 +2,7 @@
 
 ## 概述
 
-实现 Neural Synthesis 项目的个人简介页（受保护）。该页面在用户登录后展示「陈傲 (Alex Chen)」的个人档案：身份核心 / 技能矩阵 / 精选项目 / 系统日志四个 snap-section；背景含 WebGL shader canvas，头像旁含 Three.js 神经核动效。数据来源：当前用户从 `auth.me` 取，附加 profile 数据从 Go `GET /profile` 取（基于 user.id）。
+实现 X-FRONTEND 项目的个人简介页（受保护）。该页面在用户登录后展示「陈傲 (Alex Chen)」的个人档案：身份核心 / 技能矩阵 / 精选项目 / 系统日志四个 snap-section；背景含 WebGL shader canvas，头像旁含 Three.js 神经核动效。数据来源：当前用户从 `auth.me` 取，附加 profile 数据从 Go `GET /profile` 取（基于 user.id）。
 
 ## 项目信息
 

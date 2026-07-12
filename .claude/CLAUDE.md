@@ -1,4 +1,4 @@
-# Neural Synthesis
+# X-FRONTEND
 
 A runnable full-stack foundation: Next.js 16 SSR frontend + oRPC BFF + Go HTTP API + PostgreSQL. The project was bootstrapped with one landing page and a `/healthz` Go endpoint; this repo extends it with **email/password auth**, a **protected profile page**, and a **middleware route guard**.
 
@@ -56,7 +56,7 @@ x-frontend/
 ├── app/                       # Next.js App Router
 │   ├── layout.tsx              # 全局字体 + Material Symbols
 │   ├── page.tsx                # 落地页（SSR 直读 /healthz）
-│   ├── styles.css              # Tailwind + Neural Synthesis CSS 变量
+│   ├── styles.css              # Tailwind + X-FRONTEND CSS 变量
 │   ├── auth/page.tsx           # 登录/注册（双面板 toggle）
 │   ├── profile/page.tsx        # 受保护的简介页（SSR 首屏）
 │   └── api/rpc/[...rest]/route.ts  # oRPC handler

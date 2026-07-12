@@ -15,7 +15,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Neural Synthesis",
+  title: "X-FRONTEND",
   description: "SSR + oRPC gateway backed by Go + PostgreSQL",
 };
 

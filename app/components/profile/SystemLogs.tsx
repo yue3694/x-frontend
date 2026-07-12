@@ -3,6 +3,42 @@ import { RevealOnScroll } from "./RevealOnScroll";
 
 type Entry = Profile["timeline"][number];
 
+interface MarkerMeta {
+  label: string;
+  color: "primary" | "secondary" | "tertiary" | "outline";
+  shape: "dot" | "diamond";
+  size: number;       // px
+  left: number;       // px from container edge
+  top: number;        // px from container top
+  shadow?: string;    // box-shadow
+}
+
+/**
+ * Marker presets — extracted from docs/intro/code.html so visual fidelity
+ * is verifiable against the design.
+ */
+const MARKERS: Record<string, MarkerMeta> = {
+  "primary-dot":        { label: "RUNTIME",        color: "primary",   shape: "dot",      size: 10, left: 11, top: 6, shadow: "0 0 10px #adc6ff" },
+  "primary-dot-strong": { label: "RUNTIME",        color: "primary",   shape: "dot",      size: 10, left: 11, top: 6 },
+  "secondary-diamond":  { label: "CORE_SYS_FLASH", color: "secondary", shape: "diamond",  size: 12, left:  9, top: 6 },
+  "tertiary-dot":       { label: "LEGACY_SYS",     color: "tertiary",  shape: "dot",      size:  8, left: 12, top: 6 },
+  "outline-diamond":    { label: "CORE_SYS_INIT",  color: "outline",   shape: "diamond",  size: 12, left:  9, top: 6 },
+};
+
+const MARKER_COLOR_HEX: Record<MarkerMeta["color"], string> = {
+  primary: "#adc6ff",
+  secondary: "#ddb7ff",
+  tertiary: "#4cd7f6",
+  outline: "#8c909f",
+};
+
+const MARKER_TEXT_CLASS: Record<MarkerMeta["color"], string> = {
+  primary: "text-primary",
+  secondary: "text-secondary",
+  tertiary: "text-tertiary",
+  outline: "text-outline",
+};
+
 export function SystemLogs({ entries }: { entries: Entry[] }) {
   return (
     <RevealOnScroll delay={100}>
@@ -14,11 +50,11 @@ export function SystemLogs({ entries }: { entries: Entry[] }) {
             <div className="w-3 h-3 rounded-full bg-yellow-500" />
             <div className="w-3 h-3 rounded-full bg-success-green" />
           </div>
-          <div className="font-mono text-xs text-on-surface-variant">
+          <div className="font-code-sm text-xs text-on-surface-variant">
             tail -f /var/log/career.log
           </div>
         </div>
-        <div className="p-6 md:p-8 overflow-y-auto font-mono text-sm relative flex-grow">
+        <div className="p-6 md:p-8 overflow-y-auto font-code-sm text-sm relative flex-grow">
           <div className="timeline-line" />
           <div className="space-y-10">
             {entries.map((e, idx) => (
@@ -34,28 +70,29 @@ export function SystemLogs({ entries }: { entries: Entry[] }) {
 }
 
 function TimelineRow({ entry }: { entry: Entry }) {
-  const m = entry.marker;
-  const isDiamond = m.endsWith("diamond");
-  const color = m.split("-")[0];
+  const meta = MARKERS[entry.marker] ?? MARKERS["primary-dot"];
+
   return (
     <div className="relative pl-10">
       <div
-        className={`absolute z-10 ${markerStyle(m)}`}
+        className="absolute z-10"
         style={{
-          left: isDiamond ? "9px" : color === "primary" ? "11px" : color === "tertiary" ? "12px" : "11px",
-          top: "6px",
-          width: isDiamond ? "12px" : "10px",
-          height: isDiamond ? "12px" : "10px",
-          borderRadius: isDiamond ? "2px" : "50%",
-          background: markerBg(color),
-          transform: isDiamond ? "rotate(45deg)" : undefined,
-          boxShadow: color === "primary" ? "0 0 10px #adc6ff" : undefined,
+          left: `${meta.left}px`,
+          top: `${meta.top}px`,
+          width: `${meta.size}px`,
+          height: `${meta.size}px`,
+          borderRadius: meta.shape === "diamond" ? "2px" : "50%",
+          background: MARKER_COLOR_HEX[meta.color],
+          transform: meta.shape === "diamond" ? "rotate(45deg)" : undefined,
+          boxShadow: meta.shadow,
         }}
       />
-      <div className={`font-bold mb-1 ${markerTextColor(color)}`}>[RUNTIME] {entry.dateRange}</div>
+      <div className={`font-bold mb-1 ${MARKER_TEXT_CLASS[meta.color]}`}>
+        [{meta.label}] {entry.dateRange}
+      </div>
       <div className="text-on-surface text-lg font-bold mb-1">{entry.role}</div>
       {entry.tags && entry.tags.length > 0 && (
-        <div className="text-on-surface-variant mb-3 font-mono text-xs bg-surface-container inline-block px-2 py-1 rounded border border-white/5">
+        <div className="text-on-surface-variant mb-3 font-body-md text-xs bg-surface-container inline-block px-2 py-1 rounded border border-white/5">
           {entry.tags.join(" / ")}
         </div>
       )}
@@ -69,28 +106,4 @@ function TimelineRow({ entry }: { entry: Entry }) {
       </p>
     </div>
   );
-}
-
-function markerStyle(_m: string): string {
-  return "";
-}
-
-function markerBg(color: string): string {
-  switch (color) {
-    case "primary": return "#adc6ff";
-    case "secondary": return "#ddb7ff";
-    case "tertiary": return "#4cd7f6";
-    case "outline": return "#8c909f";
-    default: return "#ffffff";
-  }
-}
-
-function markerTextColor(color: string): string {
-  switch (color) {
-    case "primary": return "text-primary";
-    case "secondary": return "text-secondary";
-    case "tertiary": return "text-tertiary";
-    case "outline": return "text-outline";
-    default: return "text-on-surface";
-  }
 }

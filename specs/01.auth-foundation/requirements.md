@@ -2,7 +2,7 @@
 
 ## 概述
 
-实现 Neural Synthesis 项目的认证基座：Go HTTP API 提供注册/登录/登出/me 四个 endpoint；Next.js BFF 用 oRPC 包装这些 endpoint；前端提供 `/auth` 单页（登录 + 注册双面板 toggle，沿用 Stitch 设计稿）。
+实现 X-FRONTEND 项目的认证基座：Go HTTP API 提供注册/登录/登出/me 四个 endpoint；Next.js BFF 用 oRPC 包装这些 endpoint；前端提供 `/auth` 单页（登录 + 注册双面板 toggle，沿用 Stitch 设计稿）。
 
 ## 项目信息
 

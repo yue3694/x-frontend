@@ -1,4 +1,4 @@
-# Neural Synthesis — Specs 规划索引
+# X-FRONTEND — Specs 规划索引
 
 > 生成日期：2026-07-12
 > 项目：neural-synthesis（Next.js 16 + React 19 + oRPC BFF + Go HTTP API）

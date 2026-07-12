@@ -1,5 +1,5 @@
 ---
-name: Neural Synthesis
+name: X-FRONTEND
 colors:
   surface: '#051424'
   surface-dim: '#051424'

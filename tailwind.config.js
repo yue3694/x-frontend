@@ -3,6 +3,7 @@ module.exports = {
   darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
+    "./app/components/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./lib/**/*.{ts,tsx}",
   ],
@@ -50,8 +51,28 @@ module.exports = {
         full: "9999px",
       },
       fontFamily: {
+        // Stitch DESIGN.md typographic roles — all map to JetBrains Mono / Inter.
         mono: ["var(--font-mono)", "monospace"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        "headline-xl": ["var(--font-mono)", "monospace"],
+        "headline-lg": ["var(--font-mono)", "monospace"],
+        "headline-md": ["var(--font-mono)", "monospace"],
+        "label-caps": ["var(--font-mono)", "monospace"],
+        "code-sm": ["var(--font-mono)", "monospace"],
+        "body-lg": ["var(--font-sans)", "system-ui", "sans-serif"],
+        "body-md": ["var(--font-sans)", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        "headline-xl": [
+          "clamp(40px, 5.5vw, 60px)",
+          { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" },
+        ],
+        "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "headline-md": ["24px", { lineHeight: "1.4", fontWeight: "500" }],
+        "label-caps": ["12px", { lineHeight: "1", letterSpacing: "0.1em", fontWeight: "600" }],
+        "code-sm": ["14px", { lineHeight: "1.5", fontWeight: "400" }],
+        "body-lg": ["18px", { lineHeight: "1.6", fontWeight: "400" }],
+        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
       },
       spacing: {
         "stack-sm": "8px",
@@ -60,6 +81,12 @@ module.exports = {
         "margin-mobile": "16px",
         "margin-desktop": "40px",
         gutter: "24px",
+      },
+      boxShadow: {
+        glow: "0 0 15px rgba(173, 198, 255, 0.2)",
+        "glow-primary": "0 0 10px #adc6ff",
+        "glow-secondary": "0 0 10px #ddb7ff",
+        "glow-tertiary": "0 0 10px #4cd7f6",
       },
     },
   },

@@ -1,4 +1,4 @@
-# Neural Synthesis
+# X-FRONTEND
 
 A runnable full-stack foundation: Next.js 16 SSR frontend + oRPC BFF + Go HTTP API + PostgreSQL. Email/password auth, protected profile page, middleware route guard.
 
