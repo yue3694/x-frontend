@@ -138,11 +138,11 @@ auth: {
 ### POST /auth/register
 请求：
 ```json
-{"name": "Alex Chen", "email": "alex@neural_log.ai", "password": "SuperSecret123"}
+{"name": "Alex Chen", "email": "alex@X-FRONTEND.ai", "password": "SuperSecret123"}
 ```
 成功 201：
 ```json
-{"token": "<jwt>", "user": {"id": "u_abc", "name": "Alex Chen", "email": "alex@neural_log.ai"}}
+{"token": "<jwt>", "user": {"id": "u_abc", "name": "Alex Chen", "email": "alex@X-FRONTEND.ai"}}
 ```
 - Set-Cookie：`ns_session=<jwt>; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`
 失败：

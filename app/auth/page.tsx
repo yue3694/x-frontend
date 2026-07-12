@@ -12,7 +12,7 @@ export default function AuthPage() {
       <div className="grid-overlay" aria-hidden />
       <header className="w-full py-4 px-4 md:px-10 flex items-center justify-between z-50 relative">
         <div className="font-mono text-xl font-bold tracking-tighter text-primary">
-          NEURAL_LOG
+          X-FRONTEND
         </div>
         <div className="flex items-center gap-2 text-on-surface-variant font-mono text-xs tracking-widest">
           <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
@@ -24,7 +24,7 @@ export default function AuthPage() {
       </Suspense>
       <footer className="w-full py-4 px-4 md:px-10 text-center border-t border-white/5 relative z-50">
         <p className="text-on-surface-variant font-mono text-[10px] tracking-widest">
-          © 2024 NEURAL_LOG. ALL SYSTEMS OPERATIONAL. SECURE_PROTOCOL_TLS_1.3_ENABLED
+          © 2026 X-FRONTEND. ALL SYSTEMS OPERATIONAL. SECURE_PROTOCOL_TLS_1.3_ENABLED
         </p>
       </footer>
     </>
@@ -100,7 +100,7 @@ function AuthPanel() {
                 name="email"
                 type="email"
                 icon="account_circle"
-                placeholder="USER@NEURAL_LOG.AI"
+                placeholder="USER@X-FRONTEND.AI"
               />
               <Field
                 label="ACCESS_KEY"

@@ -116,12 +116,12 @@ export default async function ProfilePage() {
 成功 200：
 ```json
 {
-  "user": {"id":"u_abc","name":"Alex Chen","email":"alex@neural_log.ai"},
+  "user": {"id":"u_abc","name":"Alex Chen","email":"alex@X-FRONTEND.ai"},
   "profile": {
     "headline": "陈傲 (Alex Chen)",
     "subheadline": "首席 AI 工程师 // 全栈系统架构师",
     "quote": "将生物学意图与合成智能相融合",
-    "email": "alex@neural_log.ai",
+    "email": "alex@X-FRONTEND.ai",
     "location": "硅谷，加利福尼亚",
     "availability": "接受新项目",
     "avatarUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuCy745EVMp5XoyoOkKwJTNSvKHLWV9l3X59lAwOdlMcGY6dqPAoMLq6OWnthefp2SVr9aq7UovtqFWemskBonMG79b8pxRPSj__l8HzA2DaG94FOjnFzGCubuQ9ISmcYqwbtMOHPSTZEM1KhgPfkRCJiFR4OPwcXU-og7I1LHLzr9tQ18KdKZy1dbNxkr29757yZeEd3ItWvPQgTPCiAFG3ATnLeZqCL_F4o-kxuQ2ACCtJ4TpGJSIE",

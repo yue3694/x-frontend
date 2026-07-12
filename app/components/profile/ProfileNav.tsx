@@ -20,7 +20,7 @@ export function ProfileNav({ user }: { user: SessionUser }) {
     <nav className="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/10 shadow-[0_0_15px_rgba(173,198,255,0.15)]">
       <div className="flex justify-between items-center px-4 md:px-10 py-4 max-w-[1200px] mx-auto">
         <div className="font-mono text-2xl font-bold tracking-tighter text-primary">
-          NEURAL_LOG
+          X-FRONTEND
         </div>
         <div className="hidden md:flex gap-8">
           <a className="font-mono text-xs text-primary border-b-2 border-primary pb-1" href="#section1">
