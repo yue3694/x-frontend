@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
 import { getMe, getProfile } from "@/lib/go-api";
 import { headers } from "next/headers";
-import { IdentityCore } from "@/components/profile/IdentityCore";
-import { SkillMatrix } from "@/components/profile/SkillMatrix";
-import { FeaturedProjects } from "@/components/profile/FeaturedProjects";
-import { SystemLogs } from "@/components/profile/SystemLogs";
-import { ProfileNav } from "@/components/profile/ProfileNav";
-import { ScrollProgress } from "@/components/profile/ScrollProgress";
-import { CursorGlow } from "@/components/profile/CursorGlow";
-import { RevealOnScroll } from "@/components/profile/RevealOnScroll";
-import { BackgroundLayer } from "@/components/profile/BackgroundLayer";
+import { IdentityCore } from "@/app/components/profile/IdentityCore";
+import { SkillMatrix } from "@/app/components/profile/SkillMatrix";
+import { FeaturedProjects } from "@/app/components/profile/FeaturedProjects";
+import { SystemLogs } from "@/app/components/profile/SystemLogs";
+import { ProfileNav } from "@/app/components/profile/ProfileNav";
+import { ScrollProgress } from "@/app/components/profile/ScrollProgress";
+import { CursorGlow } from "@/app/components/profile/CursorGlow";
+import { RevealOnScroll } from "@/app/components/profile/RevealOnScroll";
+import { BackgroundLayer } from "@/app/components/profile/BackgroundLayer";
 
 export const dynamic = "force-dynamic";
 

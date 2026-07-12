@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:server": "cd backend && go run ./cmd/api",
+    "dev:all": "npm run dev:server && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
