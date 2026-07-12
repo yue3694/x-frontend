@@ -128,4 +128,4 @@ x-frontend/
 | --- | --- | --- |
 | `GO_API_URL` | `http://localhost:8080` | Next.js 调 Go 的地址 |
 | `AUTH_JWT_SECRET` | `dev-secret-change-me` | HS256 密钥；生产用 32+ 字节随机串 |
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable` | PostgreSQL 连接串 |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable` | PostgreSQL 连接串 |

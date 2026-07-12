@@ -66,7 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (LOWER(email));
 ```
 
 #### `backend/cmd/api/main.go` 改造
-- 从 `DATABASE_URL` 读连接串，默认 `postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable`
+- 从 `DATABASE_URL` 读连接串，默认 `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`
 - 用 `pgxpool.New` 初始化连接池，启动时执行 `schema.sql`
 - 初始化 `PostgresUserStore`
 - 挂载路由：

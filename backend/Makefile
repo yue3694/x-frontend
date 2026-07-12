@@ -8,7 +8,6 @@ PORT ?= 8080
 
 DATABASE_URL ?= postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
 AUTH_JWT_SECRET ?= dev-secret-change-me
-
 export DATABASE_URL
 export AUTH_JWT_SECRET
 

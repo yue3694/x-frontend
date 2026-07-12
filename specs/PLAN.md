@@ -40,7 +40,7 @@
 ## 全局技术决策（影响所有 feature）
 
 1. **session 存储**：HTTP-only cookie + JWT（HS256，密钥来自 `.env.local` 中的 `AUTH_JWT_SECRET`），Go 端无状态校验。
-2. **数据存储**：**PostgreSQL**（本地已安装，**TCP** `localhost:5432`，用户 `postgres`/密码 `postgres`，database `neural_synthesis` 已在本次初始化时建好）。Go 端用 `pgx/v5` + `pgxpool`；连接串 `postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable`。Go 端启动时自动执行 migration。
+2. **数据存储**：**PostgreSQL**（本地已安装，**TCP** `localhost:5432`，用户 `postgres`/密码 `postgres`，database `postgres`）。Go 端用 `pgx/v5` + `pgxpool`；连接串 `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`。Go 端启动时自动执行 migration。
 3. **样式方案**：Next.js 项目内启用 Tailwind（与现有 `app/styles.css` 的 CSS 变量共存），使用 DESIGN.md 中的 token 配色（`bg-primary` `#adc6ff` 等）。
 4. **Three.js / WebGL**：客户端组件 + `next/dynamic` 懒加载 + `ssr: false`，避免影响首屏 LCP；服务端不渲染这层视觉。
 5. **个人数据源**：硬编码在 Go 端 `internal/profile/fixtures.go`（来自 stitch 设计稿），后续可拆 JSON 配置文件或数据库。
@@ -48,7 +48,7 @@
 7. **环境变量**（新增）：
    - `GO_API_URL=http://localhost:8080`（已有）
    - `AUTH_JWT_SECRET=<32+ 字节随机串，dev 默认 `dev-secret-change-me`>`
-   - `DATABASE_URL=postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable`（Go 端）
+   - `DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`（Go 端）
 
 ## 开放问题
 

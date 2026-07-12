@@ -58,6 +58,7 @@ function AuthPanel() {
           setBusy(false);
           return;
         }
+        console.log("Registering new user:", fd.get("name"), fd.get("email"));
         await orpcClient.auth.register({
           name: String(fd.get("name") ?? ""),
           email: String(fd.get("email") ?? ""),

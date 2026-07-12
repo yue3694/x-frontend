@@ -25,7 +25,7 @@ A runnable full-stack foundation: Next.js 16 SSR frontend + oRPC BFF + Go HTTP A
 - **前端**：Next.js 16.2 (App Router) · React 19 · TypeScript 6 · Tailwind 3 · `next/font` (Inter + JetBrains Mono) · Material Symbols (CDN)
 - **BFF**：oRPC 1.14 (server + client) · Zod 4 · `jose` 6 (Edge JWT)
 - **后端**：Go 1.25 · 标准库 `net/http` · `pgx/v5` + `pgxpool` · `golang-jwt/jwt/v5` · `golang.org/x/crypto/bcrypt`
-- **数据库**：PostgreSQL 18（本地 `/tmp/.s.PGSQL.5432` socket + `localhost:5432` TCP，db=`neural_synthesis`）
+- **数据库**：PostgreSQL 18（本地 `/tmp/.s.PGSQL.5432` socket + `localhost:5432` TCP，db=`postgres`）
 - **可视**：Three.js 0.185 + 原生 WebGL fragment shader（`next/dynamic({ ssr: false })` 懒加载）
 - **样式**：`app/styles.css`（CSS 变量）+ Tailwind（`bg-primary` 等 token 对齐 DESIGN.md）
 

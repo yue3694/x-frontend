@@ -16,7 +16,7 @@
 **AC**：AC-001（前置）
 
 实现：
-- 新增 `backend/internal/db/db.go`：用 `pgx/v5` + `pgxpool` 创建连接池；从环境变量 `DATABASE_URL` 读，默认 `postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable`
+- 新增 `backend/internal/db/db.go`：用 `pgx/v5` + `pgxpool` 创建连接池；从环境变量 `DATABASE_URL` 读，默认 `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable`
 - `backend/internal/auth/schema.sql`：建表 SQL（见 design.md）
 - 启动时调用 `pool.Exec(ctx, schemaSQL)` 自动执行 migration
 

@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const DefaultDSN = "postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable"
+const DefaultDSN = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 func New(ctx context.Context) (*pgxpool.Pool, error) {
 	dsn := os.Getenv("DATABASE_URL")
