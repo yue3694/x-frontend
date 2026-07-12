@@ -58,9 +58,9 @@
 
 ## 依赖
 
-- 外部库：`golang-jwt/jwt/v5`、`golang.org/x/crypto/bcrypt`、`zod`
+- 外部库：`golang-jwt/jwt/v5`、`golang.org/x/crypto/bcrypt`、`github.com/jackc/pgx/v5` + `pgxpool`、`zod`
 - 项目内：现有 `lib/go-api.ts`（添加 `postAuth` / `getMe` 等函数）、现有 `lib/orpc/router.ts`（扩展 procedures）
 
 ## 开放问题
 
-- 无（已在 PLAN.md 全局决策中给出默认值：HTTP-only cookie + JWT + bcrypt + 进程内 sync.Map）
+- 无（已在 PLAN.md 全局决策中给出默认值：HTTP-only cookie + JWT + bcrypt + PostgreSQL via pgx/v5）

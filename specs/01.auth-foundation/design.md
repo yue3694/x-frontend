@@ -44,22 +44,37 @@ type UserStore interface {
   FindByID(ctx context.Context, id string) (User, error)
 }
 
-type MemoryUserStore struct {
-  mu    sync.RWMutex
-  users map[string]User // key: user.id
-  byEmail map[string]string // email -> user.id
+type PostgresUserStore struct {
+  pool *pgxpool.Pool
 }
 ```
-- 邮箱作为唯一键，Create 前查 `byEmail`
+- 通过 `pgx/v5` + `pgxpool` 连接 PostgreSQL
+- 启动时自动执行 migration（创建 `users` 表）
+- 邮箱唯一索引在 DB 层约束
 - ID 使用 `crypto/rand` 生成 16 字节 hex
 
+#### `backend/internal/auth/schema.sql`（启动时自动执行）
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  email         TEXT NOT NULL UNIQUE,
+  password_hash BYTEA NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (LOWER(email));
+```
+
 #### `backend/cmd/api/main.go` 改造
-- 初始化 `MemoryUserStore`
+- 从 `DATABASE_URL` 读连接串，默认 `postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable`
+- 用 `pgxpool.New` 初始化连接池，启动时执行 `schema.sql`
+- 初始化 `PostgresUserStore`
 - 挂载路由：
   - `POST /auth/register`
   - `POST /auth/login`
   - `POST /auth/logout`
   - `GET  /auth/me`
+  - `GET  /profile`（feature 02 使用）
 - 中间件：读 cookie `ns_session` → 注入 context；非必要 endpoint 容忍无 cookie（`/auth/me` 自行 401）
 
 ### Next.js BFF
@@ -172,9 +187,10 @@ auth: {
 ## 技术决策
 
 - **TD-1**：JWT vs 服务器 session —— 选 JWT（无状态；Go 进程水平扩展友好）
-- **TD-2**：进程内 sync.Map vs SQLite —— 选 sync.Map（demo 性质；保留 `UserStore` 接口）
+- **TD-2**：PostgreSQL vs SQLite vs 进程内 —— 选 PostgreSQL（用户指定，本地已安装 `/tmp/.s.PGSQL.5432`；数据持久化）
 - **TD-3**：前端 form library —— 不引入 react-hook-form，直接受控 state（feature 规模小）
 - **TD-4**：样式方案 —— 共用现有 `app/styles.css` 的 CSS 变量；新增的 glass-panel 类直接追加到该文件
+- **TD-5**：DB driver —— 选 `pgx/v5` + `pgxpool`（Go 生态首选；性能优于 lib/pq）
 
 ## 错误码表
 

@@ -8,7 +8,28 @@
 
 ---
 
-### T-001 — Go 端 UserStore + bcrypt 工具（5min）
+### T-000 — PostgreSQL 连接 + schema migration（5min）
+
+**层**：backend
+**预估**：15min
+**关联需求**：F-001（依赖 DB 持久化）
+**AC**：AC-001（前置）
+
+实现：
+- 新增 `backend/internal/db/db.go`：用 `pgx/v5` + `pgxpool` 创建连接池；从环境变量 `DATABASE_URL` 读，默认 `postgres://postgres:postgres@localhost:5432/neural_synthesis?sslmode=disable`
+- `backend/internal/auth/schema.sql`：建表 SQL（见 design.md）
+- 启动时调用 `pool.Exec(ctx, schemaSQL)` 自动执行 migration
+
+新增依赖：`go get github.com/jackc/pgx/v5`
+
+**验收**：
+- `go build ./...` 通过
+- 启动时日志显示 `connected to postgres` + `users table ready`
+- 重复启动不会因已存在的表报错（IF NOT EXISTS）
+
+---
+
+### T-001 — Go 端 UserStore + bcrypt 工具（15min）
 
 **层**：backend
 **预估**：15min
@@ -18,15 +39,15 @@
 实现 `backend/internal/auth/store.go`：
 - `User` 结构体
 - `UserStore` 接口
-- `MemoryUserStore` 实现（`sync.Map` 替代为 `sync.RWMutex + map`）
+- `PostgresUserStore` 实现（依赖 `*pgxpool.Pool`）
 - `HashPassword(plain) ([]byte, error)` / `VerifyPassword(hash, plain) error`（使用 `golang.org/x/crypto/bcrypt` cost=10）
 
 新建 `backend/internal/auth/password.go` 与 `backend/internal/auth/store.go`。
-更新 `backend/go.mod`（`go get golang.org/x/crypto/bcrypt`）。
+更新 `backend/go.mod`（`go get golang.org/x/crypto/bcrypt github.com/jackc/pgx/v5`）。
 
 **验收**：
 - `go build ./...` 通过
-- 内存 store 创建 + 查询能跑通（手动 _test.go 可选）
+- 在 PG 里手动 insert 一行后，`FindByEmail` 能取回；重复 email `Create` 返回 `email_taken` 错误
 
 ---
 
