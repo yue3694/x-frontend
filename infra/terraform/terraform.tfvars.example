@@ -1,0 +1,23 @@
+aws_region                    = "us-east-1"
+project_name                  = "neural-synthesis"
+environment                   = "production"
+vpc_id                        = "vpc-0123456789abcdef0"
+public_subnet_ids             = ["subnet-public-a", "subnet-public-b"]
+private_subnet_ids            = ["subnet-private-a", "subnet-private-b"] # must have NAT access to ECR/Secrets Manager
+github_repo_url               = "https://github.com/your-org/neural-synthesis"
+# Plain GitHub PAT stored as a raw string (not JSON). bootstrap-secrets.sh creates this.
+github_pat_secret_arn         = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/github-pat"
+database_url_secret_arn       = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/database-url"
+auth_jwt_secret_arn           = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/auth-jwt"
+cloudflare_zone_id            = "your-cloudflare-zone-id"
+cloudflare_token_secret_arn   = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/cloudflare"
+preview_domain                = "preview.example.com"
+trusted_github_actor_id       = "12345678" # only internal, trusted PR authors may deploy
+# Leave empty during first apply. Push the edge Lambda image, then set to its immutable ECR digest and apply again.
+lambda_image_uri              = ""
+
+# Optional: custom aliases for the CloudFront distribution. Leave empty for
+# the *.cloudfront.net default domain. When set, also provide the ACM cert
+# ARN in us-east-1 that covers them.
+# cloudfront_aliases         = ["app.example.com"]
+# cloudfront_acm_cert_arn    = "arn:aws:acm:us-east-1:123456789012:certificate/..."

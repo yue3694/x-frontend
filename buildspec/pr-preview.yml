@@ -1,0 +1,24 @@
+version: 0.2
+
+# This buildspec is copied into the CodeBuild project by Terraform rather than
+# loaded from the PR at runtime. Keep deployment commands here, not in PR code.
+phases:
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - export PR_NUMBER="${CODEBUILD_WEBHOOK_TRIGGER#pr/}"
+      - test -n "$PR_NUMBER"
+      - export IMAGE_TAG="pr-${PR_NUMBER}-${CODEBUILD_RESOLVED_SOURCE_VERSION:0:12}"
+      - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+  build:
+    commands:
+      - docker build -f Dockerfile.go -t "$API_REPOSITORY:$IMAGE_TAG" .
+      - docker build -t "$WEB_REPOSITORY:$IMAGE_TAG" .
+      - cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o tmp/bootstrap ./cmd/edge-lambda && cd ..
+      - docker build -f Dockerfile.lambda -t "$LAMBDA_REPOSITORY:$IMAGE_TAG" .
+      - docker push "$API_REPOSITORY:$IMAGE_TAG"
+      - docker push "$WEB_REPOSITORY:$IMAGE_TAG"
+      - docker push "$LAMBDA_REPOSITORY:$IMAGE_TAG"
+  post_build:
+    commands:
+      - if [ "${CODEBUILD_WEBHOOK_EVENT:-}" = "PULL_REQUEST_CLOSED" ]; then bash infrastructure/scripts/cleanup-pr-preview.sh "$PR_NUMBER"; else bash infrastructure/scripts/deploy-pr-preview.sh "$PR_NUMBER" "$IMAGE_TAG"; fi
