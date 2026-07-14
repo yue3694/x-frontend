@@ -1,0 +1,8 @@
+FROM public.ecr.aws/lambda/provided:al2023 AS runtime
+
+# Build the Go binary outside Docker (or `go build` here if Go toolchain present).
+# We expect the build context to contain backend/trigger-lambda (the bootstrap binary).
+COPY backend/trigger-lambda ${LAMBDA_RUNTIME_DIR}/bootstrap
+RUN chmod 755 ${LAMBDA_RUNTIME_DIR}/bootstrap
+
+CMD ["bootstrap"]
