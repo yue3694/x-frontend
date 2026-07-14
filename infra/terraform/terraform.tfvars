@@ -18,6 +18,13 @@ trusted_github_actor_id     = "293815570" # only internal, trusted PR authors ma
 # Leave empty during first apply. Push the edge Lambda image, then set to its immutable ECR digest and apply again.
 lambda_image_uri = ""
 
+# Trigger Lambda: receives GitHub PR webhooks and calls codebuild:StartBuild.
+# Created by infrastructure/scripts/bootstrap-secrets.sh.
+github_webhook_secret_arn = "arn:aws:secretsmanager:ap-northeast-1:775086395318:secret:neural-synthesis-production/github-webhook-secret-5TP10e"
+# Image URI of the trigger Lambda (built from Dockerfile.trigger-lambda).
+# Set to "<ECR>@sha256:<digest>" after pushing to ECR.
+trigger_lambda_image_uri = "775086395318.dkr.ecr.ap-northeast-1.amazonaws.com/x-frontend-production/trigger-lambda@sha256:f39cb28d14aa825e76bae6deac5fece769bdb78ef55c420b330bf0a07d77ac90"
+
 # Optional: custom aliases for the CloudFront distribution. Leave empty for
 # the *.cloudfront.net default domain. When set, also provide the ACM cert
 # ARN in us-east-1 that covers them.

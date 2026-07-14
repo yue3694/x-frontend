@@ -5,5 +5,14 @@ output "lambda_function_url" { value = try(aws_lambda_function_url.edge[0].funct
 output "cloudfront_domain" { value = aws_cloudfront_distribution.main.domain_name }
 output "cloudfront_id" { value = aws_cloudfront_distribution.main.id }
 output "waf_web_acl_arn" { value = aws_wafv2_web_acl.main.arn }
-output "ecr_repositories" { value = { api = aws_ecr_repository.api.repository_url, web = aws_ecr_repository.web.repository_url, lambda = aws_ecr_repository.lambda.repository_url } }
+output "ecr_repositories" {
+  value = {
+    api     = aws_ecr_repository.api.repository_url
+    web     = aws_ecr_repository.web.repository_url
+    lambda  = aws_ecr_repository.lambda.repository_url
+    trigger = aws_ecr_repository.trigger_lambda.repository_url
+  }
+}
 output "codebuild_project" { value = aws_codebuild_project.pr_preview.name }
+output "trigger_function_url" { value = try(aws_lambda_function_url.trigger[0].function_url, null) }
+output "trigger_function_name" { value = try(aws_lambda_function.trigger[0].function_name, null) }
