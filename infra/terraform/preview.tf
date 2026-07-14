@@ -202,7 +202,7 @@ resource "aws_codebuild_project" "pr_preview" {
       type  = "SECRETS_MANAGER"
     }
     environment_variable {
-      name  = "GITHUB_TOKEN"
+      name = "GITHUB_TOKEN"
       # Secret must be JSON {"username":"x-access-token","token":"<pat>"}.
       # ${arn}:token extracts the "token" field.
       value = "${var.github_pat_secret_arn}:token"
@@ -211,6 +211,21 @@ resource "aws_codebuild_project" "pr_preview" {
     environment_variable {
       name  = "GITHUB_REPO_URL"
       value = var.github_repo_url
+    }
+    # Populated by the trigger Lambda on each StartBuild call. The Lambda
+    # overrides these via the StartBuild env-var override mechanism so a
+    # single CodeBuild project handles every PR.
+    environment_variable {
+      name  = "PR_NUMBER"
+      value = "0"
+    }
+    environment_variable {
+      name  = "PR_REF"
+      value = "refs/heads/main"
+    }
+    environment_variable {
+      name  = "PR_ACTION"
+      value = "opened"
     }
   }
 
@@ -234,23 +249,9 @@ resource "aws_codeconnections_connection" "github" {
   name          = "x-frontend"
 }
 
-# Webhook lives on the project, not the source auth.
-
-resource "aws_codebuild_webhook" "pr_preview" {
-  project_name = aws_codebuild_project.pr_preview.name
-
-  filter_group {
-    filter {
-      type    = "EVENT"
-      pattern = "PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED,PULL_REQUEST_REOPENED,PULL_REQUEST_CLOSED"
-    }
-    filter {
-      type    = "BASE_REF"
-      pattern = "^refs/heads/main$"
-    }
-    filter {
-      type    = "ACTOR_ACCOUNT_ID"
-      pattern = var.trusted_github_actor_id
-    }
-  }
-}
+# Webhook is NOT defined here on purpose. The CodeBuild service in this
+# account has a persistent "User is not authorized to access connection"
+# error that we can't bypass with IAM, CodeConnection region, GitHub App
+# install, or terraform taint. The trigger now lives in a separate Lambda
+# that listens to GitHub webhooks and calls `codebuild:StartBuild`
+# directly. See infrastructure/scripts/ for the trigger setup.

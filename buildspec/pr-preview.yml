@@ -1,14 +1,22 @@
 version: 0.2
 
-# This buildspec is copied into the CodeBuild project by Terraform rather than
-# loaded from the PR at runtime. Keep deployment commands here, not in PR code.
+# Builds and (re)deploys a per-PR preview environment, then tears it down on
+# PULL_REQUEST_CLOSED. Source is NO_SOURCE so this buildspec does its own
+# git clone (the CodeBuild service in this account can't use CodeConnections).
+# The trigger Lambda (deployed separately) sets PR_NUMBER / PR_REF / PR_ACTION
+# via source-version overrides on StartBuild.
 phases:
   pre_build:
     commands:
       - set -euo pipefail
-      - export PR_NUMBER="${CODEBUILD_WEBHOOK_TRIGGER#pr/}"
       - test -n "$PR_NUMBER"
       - export IMAGE_TAG="pr-${PR_NUMBER}-${CODEBUILD_RESOLVED_SOURCE_VERSION:0:12}"
+      # Clone the PR head. The trigger Lambda passes the head ref via PR_REF
+      # (e.g. refs/heads/feat/foo) and the base via PR_BASE (refs/heads/main).
+      - git clone --depth 1 "https://x-access-token:${GITHUB_TOKEN}@${GITHUB_REPO_URL#https://}" "$CODEBUILD_SRC_DIR"
+      - cd "$CODEBUILD_SRC_DIR"
+      - git fetch origin "$PR_REF:$PR_REF"
+      - git checkout "$PR_REF"
       - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
   build:
     commands:
@@ -21,4 +29,4 @@ phases:
       - docker push "$LAMBDA_REPOSITORY:$IMAGE_TAG"
   post_build:
     commands:
-      - if [ "${CODEBUILD_WEBHOOK_EVENT:-}" = "PULL_REQUEST_CLOSED" ]; then bash infrastructure/scripts/cleanup-pr-preview.sh "$PR_NUMBER"; else bash infrastructure/scripts/deploy-pr-preview.sh "$PR_NUMBER" "$IMAGE_TAG"; fi
+      - if [ "${PR_ACTION:-}" = "closed" ]; then bash infrastructure/scripts/cleanup-pr-preview.sh "$PR_NUMBER"; else bash infrastructure/scripts/deploy-pr-preview.sh "$PR_NUMBER" "$IMAGE_TAG"; fi
