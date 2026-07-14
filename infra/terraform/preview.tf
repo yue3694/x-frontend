@@ -91,6 +91,17 @@ resource "aws_iam_role_policy" "codebuild_preview" {
           "${var.github_pat_secret_arn}*",
           "${var.cloudflare_token_secret_arn}*",
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codeconnections:UseConnection",
+          # CodeBuild also calls GetConnection / GetConnectionToken internally
+          # when fetching the OAuth token for the webhook's source clone.
+          "codeconnections:GetConnection",
+          "codeconnections:GetConnectionToken",
+        ]
+        Resource = [aws_codeconnections_connection.github.arn]
       }
     ]
   })
@@ -100,6 +111,16 @@ resource "aws_codebuild_project" "pr_preview" {
   name          = "${local.name}-pr-preview"
   service_role  = aws_iam_role.codebuild_preview.arn
   build_timeout = 30
+
+  # v6 provider's UpdateProject omits the buildspec field when source.type
+  # changes from GITHUB to NO_SOURCE, which AWS rejects. Force replacement
+  # so the apply goes through CreateProject (which sends all fields).
+  # Don't use create_before_destroy: the project name is fixed and AWS
+  # rejects duplicate names. Taint the resource before apply to trigger
+  # destroy-then-create.
+  lifecycle {
+    create_before_destroy = false
+  }
 
   artifacts {
     type = "NO_ARTIFACTS"
@@ -180,33 +201,40 @@ resource "aws_codebuild_project" "pr_preview" {
       value = "${var.cloudflare_token_secret_arn}:token"
       type  = "SECRETS_MANAGER"
     }
+    environment_variable {
+      name  = "GITHUB_TOKEN"
+      # Secret must be JSON {"username":"x-access-token","token":"<pat>"}.
+      # ${arn}:token extracts the "token" field.
+      value = "${var.github_pat_secret_arn}:token"
+      type  = "SECRETS_MANAGER"
+    }
+    environment_variable {
+      name  = "GITHUB_REPO_URL"
+      value = var.github_repo_url
+    }
   }
 
   source {
-    type      = "GITHUB"
-    location  = var.github_repo_url
+    # NO_SOURCE: the buildspec does its own `git clone` via the GITHUB_TOKEN
+    # env var. We don't use CodeConnections / CodeBuild webhooks because the
+    # AWS CodeBuild service in this account is having trouble using the
+    # authorized connection (persistent "User is not authorized" error).
+    # Instead, a Lambda (deployed separately) listens to GitHub webhooks via
+    # a Function URL and calls `codebuild:StartBuild` on PR events.
+    type      = "NO_SOURCE"
     buildspec = file("${path.module}/../../buildspec/pr-preview.yml")
-
-    # The AWS CodeBuild API only accepts OAUTH / CODECONNECTIONS / SECRETS_MANAGER
-    # for Source.Auth.Type. v6 provider's enum is misleading — store the PAT in
-    # Secrets Manager and reference it via the AWS-managed CodeStarSourceCredentials
-    # machinery under the hood.
-    #
-    # CodeBuild requires the FULL secret ARN including the random 6-char suffix
-    # (e.g. ".../github-pat-AbCdEf"). The partial ARN in tfvars (without suffix)
-    # is rejected with "not a valid secrets manager secret arn". Look it up.
-    auth {
-      type     = "SECRETS_MANAGER"
-      resource = data.aws_secretsmanager_secret.github_pat.arn
-    }
   }
 }
 
-# Resolve the secret name to its full ARN (which includes the random suffix
-# AWS appends on creation). CodeBuild rejects partial ARNs.
-data "aws_secretsmanager_secret" "github_pat" {
-  arn = var.github_pat_secret_arn
+# AWS-managed GitHub connection (kept in state for now; not actively used).
+# Authorize once at https://ap-northeast-1.console.aws.amazon.com/codesuite/settings/connections
+resource "aws_codeconnections_connection" "github" {
+  provider      = aws.us_east_1
+  provider_type = "GitHub"
+  name          = "x-frontend"
 }
+
+# Webhook lives on the project, not the source auth.
 
 resource "aws_codebuild_webhook" "pr_preview" {
   project_name = aws_codebuild_project.pr_preview.name
