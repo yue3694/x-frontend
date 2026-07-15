@@ -139,11 +139,12 @@ resource "aws_lb" "web" {
   subnets            = var.public_subnet_ids
 }
 resource "aws_lb_target_group" "web" {
-  name        = substr("${local.name}-web", 0, 32)
-  port        = 3000
-  protocol    = "HTTP"
-  target_type = "ip"
-  vpc_id      = var.vpc_id
+  name                 = substr("${local.name}-web", 0, 32)
+  port                 = 3000
+  protocol             = "HTTP"
+  target_type          = "ip"
+  vpc_id               = var.vpc_id
+  deregistration_delay = 30
   health_check {
     path    = "/"
     matcher = "200-399"

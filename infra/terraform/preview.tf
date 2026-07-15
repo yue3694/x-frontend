@@ -85,7 +85,8 @@ resource "aws_iam_role_policy" "codebuild_preview" {
           "elasticloadbalancing:CreateRule",
           "elasticloadbalancing:DeleteRule",
           "elasticloadbalancing:DescribeRules",
-          "elasticloadbalancing:DescribeTargetGroups"
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:ModifyTargetGroupAttributes"
         ]
         Resource = "*"
       },

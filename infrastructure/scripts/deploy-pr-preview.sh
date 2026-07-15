@@ -61,6 +61,10 @@ target_group_arn=$(aws elbv2 describe-target-groups --names "${web_service}" --q
 if [[ "$target_group_arn" == "None" || -z "$target_group_arn" ]]; then
   target_group_arn=$(aws elbv2 create-target-group --name "$web_service" --protocol HTTP --port 3000 --target-type ip --vpc-id "$VPC_ID" --health-check-path / --matcher HttpCode=200-399 --query 'TargetGroups[0].TargetGroupArn' --output text)
 fi
+aws elbv2 modify-target-group-attributes \
+  --target-group-arn "$target_group_arn" \
+  --attributes Key=deregistration_delay.timeout_seconds,Value=30 \
+  >/dev/null
 
 # Associate the target group with the ALB before ECS CreateService validates it.
 if ! aws elbv2 describe-rules --listener-arn "$ALB_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']] | length(@)" --output text | grep -q '^1$'; then

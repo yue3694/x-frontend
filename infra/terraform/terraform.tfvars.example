@@ -2,9 +2,10 @@ aws_region                    = "us-east-1"
 project_name                  = "neural-synthesis"
 environment                   = "production"
 vpc_id                        = "vpc-0123456789abcdef0"
-public_subnet_ids             = ["subnet-public-a", "subnet-public-b"]
+public_subnet_ids             = ["subnet-public-a", "subnet-public-b"] # ALB must cover every AZ used by private_subnet_ids
 private_subnet_ids            = ["subnet-private-a", "subnet-private-b"] # must have NAT access to ECR/Secrets Manager
 github_repo_url               = "https://github.com/your-org/neural-synthesis"
+github_repository             = "your-org/neural-synthesis"
 # Plain GitHub PAT stored as a raw string (not JSON). bootstrap-secrets.sh creates this.
 github_pat_secret_arn         = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/github-pat"
 database_url_secret_arn       = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/database-url"
