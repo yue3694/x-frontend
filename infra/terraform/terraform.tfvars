@@ -23,7 +23,7 @@ lambda_image_uri = ""
 github_webhook_secret_arn = "arn:aws:secretsmanager:ap-northeast-1:775086395318:secret:neural-synthesis-production/github-webhook-secret-5TP10e"
 # Image URI of the trigger Lambda (built from Dockerfile.trigger-lambda).
 # Set to "<ECR>@sha256:<digest>" after pushing to ECR.
-trigger_lambda_image_uri = "775086395318.dkr.ecr.ap-northeast-1.amazonaws.com/x-frontend-production/trigger-lambda@sha256:f39cb28d14aa825e76bae6deac5fece769bdb78ef55c420b330bf0a07d77ac90"
+trigger_lambda_image_uri = "775086395318.dkr.ecr.ap-northeast-1.amazonaws.com/x-frontend-production/trigger-lambda@sha256:209e5a2f9a46aec9257bce8c5f8168fd8727d4d0a371a71dbec4c1bae2ed6906"
 
 # Optional: custom aliases for the CloudFront distribution. Leave empty for
 # the *.cloudfront.net default domain. When set, also provide the ACM cert

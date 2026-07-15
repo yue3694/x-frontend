@@ -1,8 +1,13 @@
-FROM public.ecr.aws/lambda/provided:al2023 AS runtime
+FROM public.ecr.aws/lambda/go:1
 
-# Build the Go binary outside Docker (or `go build` here if Go toolchain present).
-# We expect the build context to contain backend/trigger-lambda (the bootstrap binary).
+# The aws-lambda-go base image has the Lambda Runtime Interface Emulator
+# already wired up; /lambda-entrypoint.sh reads the handler from the
+# function's `Handler` config and exec's the named binary. We don't need
+# to override ENTRYPOINT or set image_config.command.
+#
+# The build context must contain backend/trigger-lambda (the bootstrap binary).
 COPY backend/trigger-lambda ${LAMBDA_RUNTIME_DIR}/bootstrap
 RUN chmod 755 ${LAMBDA_RUNTIME_DIR}/bootstrap
 
+# Default CMD; Lambda sets handler via the function config.
 CMD ["bootstrap"]

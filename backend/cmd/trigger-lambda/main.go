@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -129,7 +130,21 @@ func handler(req events.LambdaFunctionURLRequest) (response, error) {
 		return ok(fmt.Sprintf("ignored event %q", eventType)), nil
 	}
 
-	// Verify the HMAC signature.
+	// Decode the body. Lambda Function URL sets isBase64Encoded=true when
+	// the Content-Type isn't a text/* type (including application/json in
+	// some configs). We try base64 first if the flag is set, then fall back
+	// to raw.
+	body := req.Body
+	if req.IsBase64Encoded {
+		decoded, err := base64.StdEncoding.DecodeString(body)
+		if err != nil {
+			return errorResp(http.StatusBadRequest, fmt.Sprintf("base64 decode: %v", err)), nil
+		}
+		body = string(decoded)
+	}
+
+	// Verify the HMAC signature against the raw body bytes (GitHub signs the
+	// raw payload, not the base64 wrapper).
 	signature := req.Headers["x-hub-signature-256"]
 	if signature == "" {
 		signature = req.Headers["X-Hub-Signature-256"]
@@ -137,12 +152,12 @@ func handler(req events.LambdaFunctionURLRequest) (response, error) {
 	if cfg.WebhookSecret == "" {
 		return errorResp(http.StatusInternalServerError, "webhook secret not configured"), nil
 	}
-	if !verifySignature(cfg.WebhookSecret, signature, req.Body) {
+	if !verifySignature(cfg.WebhookSecret, signature, body) {
 		return errorResp(http.StatusUnauthorized, "signature mismatch"), nil
 	}
 
 	var env githubEnvelope
-	if err := json.Unmarshal([]byte(req.Body), &env); err != nil {
+	if err := json.Unmarshal([]byte(body), &env); err != nil {
 		return errorResp(http.StatusBadRequest, fmt.Sprintf("invalid json: %v", err)), nil
 	}
 	if env.PullRequest.Number == 0 {
@@ -197,13 +212,13 @@ func handler(req events.LambdaFunctionURLRequest) (response, error) {
 		return errorResp(http.StatusBadGateway, fmt.Sprintf("start_build: %v", err)), nil
 	}
 
-	body, _ := json.Marshal(map[string]any{
+	respBody, _ := json.Marshal(map[string]any{
 		"build_id":  aws.ToString(startOut.Build.Id),
 		"pr":        prNumber,
 		"action":    prAction,
 		"image_tag": imageTag,
 	})
-	return response{StatusCode: http.StatusAccepted, Headers: map[string]string{"content-type": "application/json"}, Body: string(body)}, nil
+	return response{StatusCode: http.StatusAccepted, Headers: map[string]string{"content-type": "application/json"}, Body: string(respBody)}, nil
 }
 
 // verifySignature implements GitHub's HMAC-SHA256 webhook auth. Returns true
