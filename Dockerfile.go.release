@@ -1,0 +1,5 @@
+FROM alpine:3.21
+
+COPY backend/tmp/api /api
+EXPOSE 8080
+ENTRYPOINT ["/api"]

@@ -47,7 +47,7 @@ func loadConfig() Configuration {
 		PRRefEnvVar:    "PR_REF",
 		PRActionEnvVar: "PR_ACTION",
 		TrustedActorID: os.Getenv("TRUSTED_GITHUB_ACTOR_ID"),
-		GithubBaseRef:  "refs/heads/main",
+		GithubBaseRef:  "main",
 		ImageTagPrefix: "pr",
 	}
 }
@@ -200,6 +200,7 @@ func handler(req events.LambdaFunctionURLRequest) (response, error) {
 	envVars := []types.EnvironmentVariable{
 		{Name: aws.String("PR_NUMBER"), Value: aws.String(prNumber), Type: types.EnvironmentVariableTypePlaintext},
 		{Name: aws.String(cfg.PRRefEnvVar), Value: aws.String(env.PullRequest.Head.Ref), Type: types.EnvironmentVariableTypePlaintext},
+		{Name: aws.String("PR_SHA"), Value: aws.String(env.PullRequest.Head.SHA), Type: types.EnvironmentVariableTypePlaintext},
 		{Name: aws.String(cfg.PRActionEnvVar), Value: aws.String(prAction), Type: types.EnvironmentVariableTypePlaintext},
 	}
 

@@ -17,6 +17,11 @@ done
 for rule in $(aws elbv2 describe-rules --listener-arn "$ALB_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']].RuleArn" --output text); do
   aws elbv2 delete-rule --rule-arn "$rule"
 done
+if [[ -n "${ALB_HTTPS_LISTENER_ARN:-}" ]]; then
+  for rule in $(aws elbv2 describe-rules --listener-arn "$ALB_HTTPS_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']].RuleArn" --output text); do
+    aws elbv2 delete-rule --rule-arn "$rule"
+  done
+fi
 
 target_group_arn=$(aws elbv2 describe-target-groups --names "$web_service" --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null || true)
 if [[ "$target_group_arn" != "None" && -n "$target_group_arn" ]]; then aws elbv2 delete-target-group --target-group-arn "$target_group_arn"; fi

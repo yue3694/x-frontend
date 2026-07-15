@@ -13,17 +13,18 @@ database_url_secret_arn     = "arn:aws:secretsmanager:ap-northeast-1:77508639531
 auth_jwt_secret_arn         = "arn:aws:secretsmanager:ap-northeast-1:775086395318:secret:neural-synthesis-production/auth-jwt"
 cloudflare_zone_id          = "481f24290a3d33558586eb1b707c5306"
 cloudflare_token_secret_arn = "arn:aws:secretsmanager:ap-northeast-1:775086395318:secret:neural-synthesis-production/cloudflare"
-preview_domain              = "preview.inxyu.cn"
+preview_domain              = "inxyu.cn"
+alb_acm_certificate_arn     = "arn:aws:acm:ap-northeast-1:775086395318:certificate/f9fcf149-25a1-4023-b7b4-fbf914c1c812"
 trusted_github_actor_id     = "293815570" # only internal, trusted PR authors may deploy
 # Leave empty during first apply. Push the edge Lambda image, then set to its immutable ECR digest and apply again.
-lambda_image_uri = ""
+lambda_image_uri = "775086395318.dkr.ecr.ap-northeast-1.amazonaws.com/x-frontend-production/edge-lambda@sha256:5dbe95b6bdb75f03afd9614d5a691596d0f66e63b8d13849b20c84b79de42072"
 
 # Trigger Lambda: receives GitHub PR webhooks and calls codebuild:StartBuild.
 # Created by infrastructure/scripts/bootstrap-secrets.sh.
 github_webhook_secret_arn = "arn:aws:secretsmanager:ap-northeast-1:775086395318:secret:neural-synthesis-production/github-webhook-secret-5TP10e"
 # Image URI of the trigger Lambda (built from Dockerfile.trigger-lambda).
 # Set to "<ECR>@sha256:<digest>" after pushing to ECR.
-trigger_lambda_image_uri = "775086395318.dkr.ecr.ap-northeast-1.amazonaws.com/x-frontend-production/trigger-lambda@sha256:209e5a2f9a46aec9257bce8c5f8168fd8727d4d0a371a71dbec4c1bae2ed6906"
+trigger_lambda_image_uri = "775086395318.dkr.ecr.ap-northeast-1.amazonaws.com/x-frontend-production/trigger-lambda@sha256:98d160938db8b87db26f58505fc1f31ea832472a91ad8617e207c26a0c418e05"
 
 # Optional: custom aliases for the CloudFront distribution. Leave empty for
 # the *.cloudfront.net default domain. When set, also provide the ACM cert

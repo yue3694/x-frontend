@@ -1,54 +1,36 @@
 locals {
-  name        = "${var.project_name}-${var.environment}"
-  api_image   = "${aws_ecr_repository.api.repository_url}:latest"
-  web_image   = "${aws_ecr_repository.web.repository_url}:latest"
-  lambda_name = "${local.name}-edge"
-  namespace   = "${var.environment}.${var.project_name}.local"
+  name      = "${var.project_name}-${var.environment}"
+  namespace = "${var.environment}.${var.project_name}.local"
 }
 
 data "aws_caller_identity" "current" {}
 
 resource "aws_ecr_repository" "api" {
   name                 = "${local.name}/api"
-  image_tag_mutability = "IMMUTABLE"
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+  image_tag_mutability = "MUTABLE"
+  image_scanning_configuration { scan_on_push = true }
 }
-
 resource "aws_ecr_repository" "web" {
   name                 = "${local.name}/web"
-  image_tag_mutability = "IMMUTABLE"
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+  image_tag_mutability = "MUTABLE"
+  image_scanning_configuration { scan_on_push = true }
 }
-
 resource "aws_ecr_repository" "lambda" {
   name                 = "${local.name}/edge-lambda"
   image_tag_mutability = "IMMUTABLE"
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+  image_scanning_configuration { scan_on_push = true }
 }
 
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/ecs/${local.name}/api"
   retention_in_days = 30
 }
-
 resource "aws_cloudwatch_log_group" "web" {
   name              = "/ecs/${local.name}/web"
   retention_in_days = 30
 }
-
 resource "aws_cloudwatch_log_group" "lambda" {
-  name              = "/aws/lambda/${local.lambda_name}"
-  retention_in_days = 30
-}
-
-resource "aws_cloudwatch_log_group" "codebuild" {
-  name              = "/aws/codebuild/${local.name}-pr-preview"
+  name              = "/aws/lambda/${local.name}-edge"
   retention_in_days = 30
 }
 
@@ -56,10 +38,8 @@ resource "aws_service_discovery_private_dns_namespace" "internal" {
   name = local.namespace
   vpc  = var.vpc_id
 }
-
 resource "aws_service_discovery_service" "api" {
   name = "api"
-
   dns_config {
     namespace_id   = aws_service_discovery_private_dns_namespace.internal.id
     routing_policy = "MULTIVALUE"
@@ -68,32 +48,25 @@ resource "aws_service_discovery_service" "api" {
       type = "A"
     }
   }
-
-  health_check_custom_config {}
 }
 
-resource "aws_ecs_cluster" "main" {
-  name = local.name
-}
+resource "aws_ecs_cluster" "main" { name = local.name }
 
 resource "aws_security_group" "alb" {
   name   = "${local.name}-alb"
   vpc_id = var.vpc_id
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -101,18 +74,15 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 resource "aws_security_group" "web" {
   name   = "${local.name}-web"
   vpc_id = var.vpc_id
-
   ingress {
     from_port       = 3000
     to_port         = 3000
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -120,30 +90,32 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 resource "aws_security_group" "api" {
   name   = "${local.name}-api"
   vpc_id = var.vpc_id
-
   ingress {
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
     security_groups = [aws_security_group.web.id]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
+  # Lambda access is managed by aws_security_group_rule.api_from_lambda.
+  # Ignore the provider's inline-rule view so it does not try to remove that
+  # independently managed rule on every apply.
+  lifecycle {
+    ignore_changes = [ingress]
+  }
+}
 resource "aws_security_group" "lambda" {
   name   = "${local.name}-lambda"
   vpc_id = var.vpc_id
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -151,7 +123,6 @@ resource "aws_security_group" "lambda" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 resource "aws_security_group_rule" "api_from_lambda" {
   type                     = "ingress"
   from_port                = 8080
@@ -167,33 +138,40 @@ resource "aws_lb" "web" {
   security_groups    = [aws_security_group.alb.id]
   subnets            = var.public_subnet_ids
 }
-
 resource "aws_lb_target_group" "web" {
   name        = substr("${local.name}-web", 0, 32)
   port        = 3000
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = var.vpc_id
-
   health_check {
     path    = "/"
     matcher = "200-399"
   }
 }
-
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.web.arn
   port              = 80
   protocol          = "HTTP"
-
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
+}
+resource "aws_lb_listener" "https" {
+  count             = var.alb_acm_certificate_arn == "" ? 0 : 1
+  load_balancer_arn = aws_lb.web.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.alb_acm_certificate_arn
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.web.arn
   }
 }
 
-# One of the three roles: shared assume-policy for the two ECS task roles.
-data "aws_iam_policy_document" "ecs_task_assume" {
+data "aws_iam_policy_document" "ecs_assume" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
@@ -202,20 +180,31 @@ data "aws_iam_policy_document" "ecs_task_assume" {
     }
   }
 }
-
 resource "aws_iam_role" "ecs_execution" {
   name               = "${local.name}-ecs-execution"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
 }
-
 resource "aws_iam_role_policy_attachment" "ecs_execution" {
   role       = aws_iam_role.ecs_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
-
+data "aws_iam_policy_document" "ecs_execution_secrets" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      "${var.database_url_secret_arn}*",
+      "${var.auth_jwt_secret_arn}*",
+    ]
+  }
+}
+resource "aws_iam_role_policy" "ecs_execution_secrets" {
+  name   = "${local.name}-read-runtime-secrets"
+  role   = aws_iam_role.ecs_execution.id
+  policy = data.aws_iam_policy_document.ecs_execution_secrets.json
+}
 resource "aws_iam_role" "ecs_task" {
   name               = "${local.name}-ecs-task"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
 }
 
 resource "aws_ecs_task_definition" "api" {
@@ -226,29 +215,13 @@ resource "aws_ecs_task_definition" "api" {
   memory                   = var.container_memory
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
-
   container_definitions = jsonencode([{
-    name      = "api"
-    image     = local.api_image
-    essential = true
-    portMappings = [{
-      containerPort = 8080
-    }]
-    secrets = [
-      { name = "DATABASE_URL", valueFrom = var.database_url_secret_arn },
-      { name = "AUTH_JWT_SECRET", valueFrom = var.auth_jwt_secret_arn },
-    ]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = aws_cloudwatch_log_group.api.name
-        awslogs-region        = var.aws_region
-        awslogs-stream-prefix = "api"
-      }
-    }
+    name             = "api", image = "${aws_ecr_repository.api.repository_url}:latest", essential = true
+    portMappings     = [{ containerPort = 8080 }]
+    secrets          = [{ name = "DATABASE_URL", valueFrom = var.database_url_secret_arn }, { name = "AUTH_JWT_SECRET", valueFrom = var.auth_jwt_secret_arn }]
+    logConfiguration = { logDriver = "awslogs", options = { awslogs-group = aws_cloudwatch_log_group.api.name, awslogs-region = var.aws_region, awslogs-stream-prefix = "api" } }
   }])
 }
-
 resource "aws_ecs_task_definition" "web" {
   family                   = "${local.name}-web"
   network_mode             = "awsvpc"
@@ -257,76 +230,46 @@ resource "aws_ecs_task_definition" "web" {
   memory                   = var.container_memory
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
-
   container_definitions = jsonencode([{
-    name      = "web"
-    image     = local.web_image
-    essential = true
-    portMappings = [{
-      containerPort = 3000
-    }]
-    environment = [
-      { name = "GO_API_URL", value = "http://api.${local.namespace}:8080" },
-    ]
-    # Next.js (proxy.ts) needs the same secret as the Go API or every JWT
-    # verification falls back to the dev default and sessions break.
-    secrets = [
-      { name = "AUTH_JWT_SECRET", valueFrom = var.auth_jwt_secret_arn },
-    ]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = aws_cloudwatch_log_group.web.name
-        awslogs-region        = var.aws_region
-        awslogs-stream-prefix = "web"
-      }
-    }
+    name             = "web", image = "${aws_ecr_repository.web.repository_url}:latest", essential = true
+    portMappings     = [{ containerPort = 3000 }]
+    environment      = [{ name = "GO_API_URL", value = "http://api.${local.namespace}:8080" }]
+    secrets          = [{ name = "AUTH_JWT_SECRET", valueFrom = var.auth_jwt_secret_arn }]
+    logConfiguration = { logDriver = "awslogs", options = { awslogs-group = aws_cloudwatch_log_group.web.name, awslogs-region = var.aws_region, awslogs-stream-prefix = "web" } }
   }])
 }
-
 resource "aws_ecs_service" "api" {
   name            = "${local.name}-api"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = 2
   launch_type     = "FARGATE"
-
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.api.id]
     assign_public_ip = false
   }
-
-  service_registries {
-    registry_arn = aws_service_discovery_service.api.arn
-  }
+  service_registries { registry_arn = aws_service_discovery_service.api.arn }
 }
-
 resource "aws_ecs_service" "web" {
   name            = "${local.name}-web"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.web.arn
   desired_count   = 2
   launch_type     = "FARGATE"
-
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.web.id]
     assign_public_ip = false
   }
-
   load_balancer {
     target_group_arn = aws_lb_target_group.web.arn
     container_name   = "web"
     container_port   = 3000
   }
-
   depends_on = [aws_lb_listener.http]
 }
 
-# Third of the three roles: dedicated execution role for the edge Lambda. It is
-# intentionally separate from the ECS roles so its trust boundary and policy
-# surface can be reviewed without affecting the long-running services.
 data "aws_iam_policy_document" "lambda_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -336,97 +279,51 @@ data "aws_iam_policy_document" "lambda_assume" {
     }
   }
 }
-
 resource "aws_iam_role" "lambda" {
   name               = "${local.name}-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 }
-
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
-
 resource "aws_iam_role_policy_attachment" "lambda_vpc" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
-
 resource "aws_iam_role_policy_attachment" "lambda_xray" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
-
 resource "aws_lambda_function" "edge" {
   count         = var.lambda_image_uri == "" ? 0 : 1
-  function_name = local.lambda_name
+  function_name = "${local.name}-edge"
   package_type  = "Image"
   role          = aws_iam_role.lambda.arn
+  image_uri     = var.lambda_image_uri
   timeout       = 5
   memory_size   = 256
-
-  image_config {
-    command = ["bootstrap"]
-  }
-
-  environment {
-    variables = {
-      API_BASE_URL = "http://api.${local.namespace}:8080"
-    }
-  }
-
+  image_config { command = ["bootstrap"] }
+  environment { variables = { API_BASE_URL = "http://api.${local.namespace}:8080" } }
   vpc_config {
     subnet_ids         = var.private_subnet_ids
     security_group_ids = [aws_security_group.lambda.id]
   }
-
-  image_uri  = var.lambda_image_uri
-  depends_on = [aws_cloudwatch_log_group.lambda]
 }
 
-# Function URL exposes the Lambda over HTTPS so CloudFront can call it as an
-# origin. Auth is IAM (sigv4); the resource policy + lambda_permission below
-# lock the URL to this CloudFront distribution only.
+# CloudFront uses this origin only when lambda_image_uri is set. Keep the URL
+# and its permission under the same condition to support a clean bootstrap
+# apply before the edge image exists in ECR.
 resource "aws_lambda_function_url" "edge" {
   count              = var.lambda_image_uri == "" ? 0 : 1
   function_name      = aws_lambda_function.edge[0].function_name
-  authorization_type = "AWS_IAM"
-
-  cors {
-    allow_origins = ["*"]
-    allow_methods = ["GET", "HEAD"]
-    allow_headers = ["*"]
-    max_age       = 86400
-  }
+  authorization_type = "NONE"
 }
-
-data "aws_iam_policy_document" "lambda_url_invoke" {
-  count = var.lambda_image_uri == "" ? 0 : 1
-
-  statement {
-    sid       = "AllowCloudFrontServicePrincipal"
-    effect    = "Allow"
-    actions   = ["lambda:InvokeFunctionUrl"]
-    resources = [aws_lambda_function.edge[0].arn]
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.main.arn]
-    }
-  }
-}
-
-resource "aws_lambda_permission" "cloudfront_invoke_url" {
-  count         = var.lambda_image_uri == "" ? 0 : 1
-  statement_id  = "AllowCloudFrontInvoke"
-  action        = "lambda:InvokeFunctionUrl"
-  function_name = aws_lambda_function.edge[0].function_name
-  principal     = "cloudfront.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.main.arn
+resource "aws_lambda_permission" "edge_url_public" {
+  count                  = var.lambda_image_uri == "" ? 0 : 1
+  statement_id           = "AllowCloudFrontFunctionUrl"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.edge[0].function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }

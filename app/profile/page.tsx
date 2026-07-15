@@ -42,7 +42,7 @@ export default async function ProfilePage() {
             <RevealOnScroll>
               <div className="mb-8 text-center">
                 <h2 className="font-mono text-3xl md:text-4xl text-on-surface mb-2">
-                  技能矩阵 <span className="text-primary opacity-50">//</span>{" "}
+                  技能矩阵 <span className="text-primary opacity-50">{"//"}</span>{" "}
                   <span className="text-lg font-light text-on-surface-variant">TECHNOLOGY STACK</span>
                 </h2>
               </div>
@@ -56,7 +56,7 @@ export default async function ProfilePage() {
             <RevealOnScroll>
               <div className="mb-10 text-center">
                 <h2 className="font-mono text-3xl md:text-4xl text-on-surface mb-2">
-                  精选项目 <span className="text-tertiary opacity-50">//</span>{" "}
+                  精选项目 <span className="text-tertiary opacity-50">{"//"}</span>{" "}
                   <span className="text-lg font-light text-on-surface-variant">DEPLOYED SYSTEMS</span>
                 </h2>
               </div>
@@ -70,7 +70,7 @@ export default async function ProfilePage() {
             <RevealOnScroll>
               <div className="mb-10 text-center">
                 <h2 className="font-mono text-3xl md:text-4xl text-on-surface mb-2">
-                  系统日志 <span className="text-primary opacity-50">//</span>{" "}
+                  系统日志 <span className="text-primary opacity-50">{"//"}</span>{" "}
                   <span className="text-lg font-light text-on-surface-variant">EXECUTION TRACE</span>
                 </h2>
               </div>

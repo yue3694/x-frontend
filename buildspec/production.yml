@@ -1,0 +1,22 @@
+version: 0.2
+
+# Invoked explicitly with CodeBuild's buildspec override. It uses the existing
+# GITHUB_TOKEN / GITHUB_REPO_URL secrets from the PR build project but never
+# creates preview resources.
+phases:
+  pre_build:
+    commands:
+      - set -eu
+      - git clone --depth 1 --branch main "$GITHUB_REPO_URL" "$CODEBUILD_SRC_DIR/app"
+      - cd "$CODEBUILD_SRC_DIR/app"
+      - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+  build:
+    commands:
+      - docker build -f Dockerfile.go -t "$API_REPOSITORY:latest" .
+      - docker build -t "$WEB_REPOSITORY:latest" .
+      - docker push "$API_REPOSITORY:latest"
+      - docker push "$WEB_REPOSITORY:latest"
+  post_build:
+    commands:
+      - aws ecs update-service --cluster "$ECS_CLUSTER" --service "${ECS_CLUSTER}-api" --force-new-deployment
+      - aws ecs update-service --cluster "$ECS_CLUSTER" --service "${ECS_CLUSTER}-web" --force-new-deployment

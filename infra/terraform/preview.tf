@@ -8,6 +8,11 @@ data "aws_iam_policy_document" "codebuild_assume" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "codebuild" {
+  name              = "/aws/codebuild/${local.name}-pr-preview"
+  retention_in_days = 30
+}
+
 resource "aws_iam_role" "codebuild_preview" {
   name               = "${local.name}-pr-preview"
   assume_role_policy = data.aws_iam_policy_document.codebuild_assume.json
@@ -67,7 +72,8 @@ resource "aws_iam_role_policy" "codebuild_preview" {
         Action = [
           "servicediscovery:CreateService",
           "servicediscovery:DeleteService",
-          "servicediscovery:GetService"
+          "servicediscovery:GetService",
+          "servicediscovery:ListServices"
         ]
         Resource = "*"
       },
@@ -78,7 +84,8 @@ resource "aws_iam_role_policy" "codebuild_preview" {
           "elasticloadbalancing:DeleteTargetGroup",
           "elasticloadbalancing:CreateRule",
           "elasticloadbalancing:DeleteRule",
-          "elasticloadbalancing:DescribeRules"
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeTargetGroups"
         ]
         Resource = "*"
       },
@@ -181,6 +188,10 @@ resource "aws_codebuild_project" "pr_preview" {
       value = aws_lb_listener.http.arn
     }
     environment_variable {
+      name  = "ALB_HTTPS_LISTENER_ARN"
+      value = var.alb_acm_certificate_arn == "" ? "" : aws_lb_listener.https[0].arn
+    }
+    environment_variable {
       name  = "ALB_DNS_NAME"
       value = aws_lb.web.dns_name
     }
@@ -203,8 +214,7 @@ resource "aws_codebuild_project" "pr_preview" {
     }
     environment_variable {
       name = "GITHUB_TOKEN"
-      # Secret must be JSON {"username":"x-access-token","token":"<pat>"}.
-      # ${arn}:token extracts the "token" field.
+      # Secret is JSON {"token":"<pat>"}; extract only the token key.
       value = "${var.github_pat_secret_arn}:token"
       type  = "SECRETS_MANAGER"
     }
@@ -221,7 +231,11 @@ resource "aws_codebuild_project" "pr_preview" {
     }
     environment_variable {
       name  = "PR_REF"
-      value = "refs/heads/main"
+      value = "main"
+    }
+    environment_variable {
+      name  = "PR_SHA"
+      value = "manual"
     }
     environment_variable {
       name  = "PR_ACTION"
@@ -230,8 +244,8 @@ resource "aws_codebuild_project" "pr_preview" {
   }
 
   source {
-    # NO_SOURCE: the buildspec does its own `git clone` via the GITHUB_TOKEN
-    # env var. We don't use CodeConnections / CodeBuild webhooks because the
+    # NO_SOURCE: the buildspec clones the public repository itself. We don't
+    # use CodeConnections / CodeBuild webhooks because the
     # AWS CodeBuild service in this account is having trouble using the
     # authorized connection (persistent "User is not authorized" error).
     # Instead, a Lambda (deployed separately) listens to GitHub webhooks via
