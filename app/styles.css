@@ -32,6 +32,13 @@ body {
   overflow-x: hidden;
 }
 
+.profile-shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
 /* ---- Grid overlay ---- */
 .grid-overlay {
   position: fixed;
@@ -41,7 +48,32 @@ body {
     linear-gradient(90deg, rgba(173, 198, 255, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
   mask-image: linear-gradient(to bottom, black, transparent);
-  z-index: -1;
+  z-index: 1;
+}
+
+/* ---- Ambient particles from the profile design ---- */
+.particle {
+  --particle-left: 50vw;
+  --particle-size: 2px;
+  --particle-duration: 10s;
+  --particle-delay: 0s;
+  position: fixed;
+  left: var(--particle-left);
+  bottom: -12px;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  background: rgba(173, 198, 255, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  animation: particle-float var(--particle-duration) var(--particle-delay) infinite linear;
+}
+
+@keyframes particle-float {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
 }
 
 /* ---- Cursor glow ---- */
@@ -229,7 +261,7 @@ body {
 }
 
 /* ---- Original landing styles (kept for /) ---- */
-main { position: relative; max-width: 1200px; padding: 24px 40px 72px; margin: auto; }
+.landing-shell { position: relative; max-width: 1200px; padding: 24px 40px 72px; margin: auto; }
 nav.app-nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); font: 600 12px/1 "SFMono-Regular", Consolas, monospace; letter-spacing: 0.1em; }
 .brand { color: var(--blue); }
 .status { color: var(--cyan); }
@@ -246,10 +278,22 @@ nav.app-nav { display: flex; justify-content: space-between; align-items: center
 .architecture p { margin: 0; color: var(--muted); line-height: 1.6; }
 
 @media (max-width: 700px) {
-  main { padding: 20px 16px 48px; }
+  .landing-shell { padding: 20px 16px 48px; }
   .hero { padding: 80px 0 56px; }
   .architecture { grid-template-columns: 1fr; }
   .actions { align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle,
+  .scan-line,
+  .pulse-dot {
+    animation: none;
+  }
+
+  .scroll-container {
+    scroll-behavior: auto;
+  }
 }
 
 /* ---- Aliases / extra utilities ---- */
