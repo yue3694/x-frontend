@@ -134,6 +134,12 @@ x-frontend/
 
 Terraform is in [`infra/terraform`](infra/terraform). Production traffic is `Cloudflare → ALB → Next.js SSR (ECS Fargate) → Go API (ECS Fargate / Cloud Map)`. The API has no public target group; ECS and the VPC Lambda resolve `api.<private namespace>` through Cloud Map.
 
-PR builds create `pr-<number>.<preview domain>` resources: separate Web/API Fargate services, a Cloud Map API name, an ALB host rule, and a proxied Cloudflare CNAME. The CodeBuild webhook accepts only trusted internal PR authors targeting `main`; untrusted fork PRs must never receive a deploy-capable AWS role.
+PR builds create `pr-<number>.<preview domain>` resources: separate Web/API Fargate services, a Cloud Map API name, an ALB host rule, and a proxied Cloudflare CNAME. The GitHub Actions workflow accepts only internal PRs targeting `main`; untrusted fork PRs never receive a deploy-capable AWS role.
+
+The `PR Preview` GitHub Actions workflow assumes a narrowly scoped AWS role
+through GitHub OIDC, starts the CodeBuild project, waits for the ECS deployment,
+and publishes the build logs and preview URL in both Actions and the PR Checks
+panel. Fork PRs are skipped. Closing a PR runs the same workflow with the
+cleanup action.
 
 Copy `infra/terraform/terraform.tfvars.example` to `terraform.tfvars`, fill in the VPC/subnets, secret ARNs, Cloudflare Zone, preview domain, and trusted GitHub actor ID. Private subnets require NAT or VPC endpoints for ECR, Secrets Manager and CloudWatch Logs.
