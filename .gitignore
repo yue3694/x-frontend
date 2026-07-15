@@ -40,4 +40,5 @@ dev.log
 tmp/
 
 .terraform/
+*.tfplan
 .DS_Store

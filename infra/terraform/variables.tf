@@ -33,6 +33,11 @@ variable "cloudflare_token_secret_arn" {
   sensitive = true
 }
 variable "preview_domain" { type = string }
+variable "alb_acm_certificate_arn" {
+  description = "ACM certificate in the application region for the ALB HTTPS listener."
+  type        = string
+  default     = ""
+}
 variable "trusted_github_actor_id" { type = string }
 variable "lambda_image_uri" {
   type    = string

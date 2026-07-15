@@ -129,3 +129,11 @@ x-frontend/
 | `GO_API_URL` | `http://localhost:8080` | Next.js 调 Go 的地址 |
 | `AUTH_JWT_SECRET` | `dev-secret-change-me` | HS256 密钥；生产用 32+ 字节随机串 |
 | `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable` | PostgreSQL 连接串 |
+
+## AWS deployment
+
+Terraform is in [`infra/terraform`](infra/terraform). Production traffic is `Cloudflare → ALB → Next.js SSR (ECS Fargate) → Go API (ECS Fargate / Cloud Map)`. The API has no public target group; ECS and the VPC Lambda resolve `api.<private namespace>` through Cloud Map.
+
+PR builds create `pr-<number>.<preview domain>` resources: separate Web/API Fargate services, a Cloud Map API name, an ALB host rule, and a proxied Cloudflare CNAME. The CodeBuild webhook accepts only trusted internal PR authors targeting `main`; untrusted fork PRs must never receive a deploy-capable AWS role.
+
+Copy `infra/terraform/terraform.tfvars.example` to `terraform.tfvars`, fill in the VPC/subnets, secret ARNs, Cloudflare Zone, preview domain, and trusted GitHub actor ID. Private subnets require NAT or VPC endpoints for ECR, Secrets Manager and CloudWatch Logs.

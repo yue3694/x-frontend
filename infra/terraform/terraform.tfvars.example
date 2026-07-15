@@ -12,6 +12,7 @@ auth_jwt_secret_arn           = "arn:aws:secretsmanager:us-east-1:123456789012:s
 cloudflare_zone_id            = "your-cloudflare-zone-id"
 cloudflare_token_secret_arn   = "arn:aws:secretsmanager:us-east-1:123456789012:secret:neural-synthesis/cloudflare"
 preview_domain                = "preview.example.com"
+alb_acm_certificate_arn       = ""
 trusted_github_actor_id       = "12345678" # only internal, trusted PR authors may deploy
 # Leave empty during first apply. Push the edge Lambda image, then set to its immutable ECR digest and apply again.
 lambda_image_uri              = ""

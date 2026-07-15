@@ -4,29 +4,106 @@ version: 0.2
 # PULL_REQUEST_CLOSED. Source is NO_SOURCE so this buildspec does its own
 # git clone (the CodeBuild service in this account can't use CodeConnections).
 # The trigger Lambda (deployed separately) sets PR_NUMBER / PR_REF / PR_ACTION
-# via source-version overrides on StartBuild.
+# via environment overrides on StartBuild.
 phases:
   pre_build:
     commands:
-      - set -euo pipefail
+      - set -eu
       - test -n "$PR_NUMBER"
-      - export IMAGE_TAG="pr-${PR_NUMBER}-${CODEBUILD_RESOLVED_SOURCE_VERSION:0:12}"
-      # Clone the PR head. The trigger Lambda passes the head ref via PR_REF
-      # (e.g. refs/heads/feat/foo) and the base via PR_BASE (refs/heads/main).
-      - git clone --depth 1 "https://x-access-token:${GITHUB_TOKEN}@${GITHUB_REPO_URL#https://}" "$CODEBUILD_SRC_DIR"
-      - cd "$CODEBUILD_SRC_DIR"
-      - git fetch origin "$PR_REF:$PR_REF"
-      - git checkout "$PR_REF"
-      - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+      - |
+        export IMAGE_TAG="pr-${PR_NUMBER}-$(printf '%s' "${PR_SHA:-manual}" | cut -c1-12)-${CODEBUILD_BUILD_NUMBER}"
+        if [ "${PR_ACTION:-build}" != "closed" ]; then
+          git clone --depth 1 "$GITHUB_REPO_URL" "$CODEBUILD_SRC_DIR"
+          cd "$CODEBUILD_SRC_DIR"
+          git fetch --depth 1 origin "refs/pull/${PR_NUMBER}/head"
+          git checkout --detach FETCH_HEAD
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          # Use ECR Public mirrors to avoid Docker Hub anonymous pull limits.
+          docker pull public.ecr.aws/docker/library/golang:1.25-alpine
+          docker tag public.ecr.aws/docker/library/golang:1.25-alpine golang:1.25-alpine
+          docker pull public.ecr.aws/docker/library/node:22-alpine
+          docker tag public.ecr.aws/docker/library/node:22-alpine node:22-alpine
+          docker pull public.ecr.aws/docker/library/alpine:3.21
+          docker tag public.ecr.aws/docker/library/alpine:3.21 alpine:3.21
+        fi
   build:
     commands:
-      - docker build -f Dockerfile.go -t "$API_REPOSITORY:$IMAGE_TAG" .
-      - docker build -t "$WEB_REPOSITORY:$IMAGE_TAG" .
-      - cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o tmp/bootstrap ./cmd/edge-lambda && cd ..
-      - docker build -f Dockerfile.lambda -t "$LAMBDA_REPOSITORY:$IMAGE_TAG" .
-      - docker push "$API_REPOSITORY:$IMAGE_TAG"
-      - docker push "$WEB_REPOSITORY:$IMAGE_TAG"
-      - docker push "$LAMBDA_REPOSITORY:$IMAGE_TAG"
+      - |
+        set -eu
+        if [ "${PR_ACTION:-build}" != "closed" ]; then
+          docker build -f Dockerfile.go -t "$API_REPOSITORY:$IMAGE_TAG" .
+          docker build -t "$WEB_REPOSITORY:$IMAGE_TAG" .
+          docker run --rm \
+            -v "$PWD/backend:/src" -w /src \
+            -e GOOS=linux -e GOARCH=amd64 -e CGO_ENABLED=0 \
+            public.ecr.aws/docker/library/golang:1.25-alpine \
+            go build -o tmp/bootstrap ./cmd/edge-lambda
+          docker build -f Dockerfile.lambda -t "$LAMBDA_REPOSITORY:$IMAGE_TAG" .
+          docker push "$API_REPOSITORY:$IMAGE_TAG"
+          docker push "$WEB_REPOSITORY:$IMAGE_TAG"
+          docker push "$LAMBDA_REPOSITORY:$IMAGE_TAG"
+        else
+          echo "PR closed; skipping image build"
+        fi
   post_build:
     commands:
-      - if [ "${PR_ACTION:-}" = "closed" ]; then bash infrastructure/scripts/cleanup-pr-preview.sh "$PR_NUMBER"; else bash infrastructure/scripts/deploy-pr-preview.sh "$PR_NUMBER" "$IMAGE_TAG"; fi
+      - |
+        set -eu
+        if [ "${PR_ACTION:-}" = "closed" ]; then
+          api_service="pr-${PR_NUMBER}-api"
+          web_service="pr-${PR_NUMBER}-web"
+          host="pr-${PR_NUMBER}.${PREVIEW_DOMAIN}"
+          for service in "$api_service" "$web_service"; do
+            if aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$service" --query 'services[0].status' --output text 2>/dev/null | grep -q ACTIVE; then
+              aws ecs update-service --cluster "$ECS_CLUSTER" --service "$service" --desired-count 0 >/dev/null
+              aws ecs delete-service --cluster "$ECS_CLUSTER" --service "$service" --force >/dev/null
+              aws ecs wait services-inactive --cluster "$ECS_CLUSTER" --services "$service"
+            fi
+          done
+          for listener in "$ALB_LISTENER_ARN" "${ALB_HTTPS_LISTENER_ARN:-}"; do
+            [ -z "$listener" ] && continue
+            for rule in $(aws elbv2 describe-rules --listener-arn "$listener" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']].RuleArn" --output text); do
+              aws elbv2 delete-rule --rule-arn "$rule"
+            done
+          done
+          target_group_arn=$(aws elbv2 describe-target-groups --names "$web_service" --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null || true)
+          if [ "$target_group_arn" != "None" ] && [ -n "$target_group_arn" ]; then
+            for attempt in 1 2 3 4 5 6; do
+              aws elbv2 delete-target-group --target-group-arn "$target_group_arn" 2>/dev/null && break
+              sleep 10
+            done
+          fi
+          cloud_map_id=$(aws servicediscovery list-services --query "Services[?Name=='${api_service}'].Id | [0]" --output text)
+          if [ "$cloud_map_id" != "None" ] && [ -n "$cloud_map_id" ]; then
+            for attempt in 1 2 3 4 5 6; do
+              aws servicediscovery delete-service --id "$cloud_map_id" 2>/dev/null && break
+              sleep 10
+            done
+          fi
+          record=$(curl -fsS "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/dns_records?type=CNAME&name=${host}" -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" | jq -r '.result[0].id // empty')
+          if [ -n "$record" ]; then
+            curl -fsS -X DELETE "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${record}" -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" >/dev/null
+          fi
+          echo "Preview removed: ${host}"
+        elif [ "${CODEBUILD_BUILD_SUCCEEDING:-0}" = "1" ]; then
+          # PR branches can contain an older deployment helper. Associate the
+          # target group here before that helper calls ECS CreateService.
+          web_service="pr-${PR_NUMBER}-web"
+          host="pr-${PR_NUMBER}.${PREVIEW_DOMAIN}"
+          target_group_arn=$(aws elbv2 describe-target-groups --names "$web_service" --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null || true)
+          if [ "$target_group_arn" = "None" ] || [ -z "$target_group_arn" ]; then
+            target_group_arn=$(aws elbv2 create-target-group --name "$web_service" --protocol HTTP --port 3000 --target-type ip --vpc-id "$VPC_ID" --health-check-path / --matcher HttpCode=200-399 --query 'TargetGroups[0].TargetGroupArn' --output text)
+          fi
+          if ! aws elbv2 describe-rules --listener-arn "$ALB_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']] | length(@)" --output text | grep -q '^1$'; then
+            priority=$((1000 + PR_NUMBER))
+            aws elbv2 create-rule --listener-arn "$ALB_LISTENER_ARN" --priority "$priority" --conditions "Field=host-header,Values=${host}" --actions "Type=forward,TargetGroupArn=${target_group_arn}" >/dev/null
+          fi
+          if [ -n "${ALB_HTTPS_LISTENER_ARN:-}" ] && ! aws elbv2 describe-rules --listener-arn "$ALB_HTTPS_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']] | length(@)" --output text | grep -q '^1$'; then
+            priority=$((1000 + PR_NUMBER))
+            aws elbv2 create-rule --listener-arn "$ALB_HTTPS_LISTENER_ARN" --priority "$priority" --conditions "Field=host-header,Values=${host}" --actions "Type=forward,TargetGroupArn=${target_group_arn}" >/dev/null
+          fi
+          bash infrastructure/scripts/deploy-pr-preview.sh "$PR_NUMBER" "$IMAGE_TAG"
+        else
+          echo "Image build failed; preview deployment skipped"
+          exit 1
+        fi

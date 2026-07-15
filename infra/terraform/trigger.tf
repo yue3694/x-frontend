@@ -94,6 +94,15 @@ variable "trigger_lambda_image_uri" {
   default = ""
 }
 
+# Resolve the webhook secret value at plan time so we can inject it directly
+# into the Lambda's env (rather than passing the ARN — the Lambda doesn't
+# have a Secrets Manager SDK wired up and doing an SDK call per request
+# would inflate the cold start).
+data "aws_secretsmanager_secret_version" "webhook_secret" {
+  count     = var.trigger_lambda_image_uri == "" ? 0 : 1
+  secret_id = var.github_webhook_secret_arn
+}
+
 resource "aws_lambda_function" "trigger" {
   count         = var.trigger_lambda_image_uri == "" ? 0 : 1
   function_name = local.trigger_lambda_name
@@ -102,14 +111,18 @@ resource "aws_lambda_function" "trigger" {
   timeout       = 30
   memory_size   = 256
 
+  # The provided:al2023 base image's ENTRYPOINT is /lambda-entrypoint.sh,
+  # which requires exactly one positional argument (the handler name).
+  # Lambda Runtime Interface Emulator reads this from image_config.command.
   image_config {
     command = ["bootstrap"]
+    # WorkingDirectory = "/var/runtime" by default; bootstrap is there.
   }
 
   environment {
     variables = {
       CODEBUILD_PROJECT_NAME  = aws_codebuild_project.pr_preview.name
-      GITHUB_WEBHOOK_SECRET   = var.trigger_lambda_image_uri == "" ? "" : "${var.github_webhook_secret_arn}"
+      GITHUB_WEBHOOK_SECRET   = data.aws_secretsmanager_secret_version.webhook_secret[0].secret_string
       TRUSTED_GITHUB_ACTOR_ID = var.trusted_github_actor_id
     }
   }

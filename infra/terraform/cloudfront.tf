@@ -153,7 +153,9 @@ resource "aws_cloudfront_distribution" "main" {
   dynamic "origin" {
     for_each = var.lambda_image_uri == "" ? [] : [1]
     content {
-      domain_name = aws_lambda_function_url.edge[0].url_id
+      # CloudFront expects only the hostname, while Function URL exposes a
+      # complete URL such as https://<id>.lambda-url.<region>.on.aws/.
+      domain_name = trimsuffix(trimprefix(aws_lambda_function_url.edge[0].function_url, "https://"), "/")
       origin_id   = "lambda-edge"
       custom_origin_config {
         http_port              = 80

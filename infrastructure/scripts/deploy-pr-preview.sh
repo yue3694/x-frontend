@@ -61,17 +61,23 @@ target_group_arn=$(aws elbv2 describe-target-groups --names "${web_service}" --q
 if [[ "$target_group_arn" == "None" || -z "$target_group_arn" ]]; then
   target_group_arn=$(aws elbv2 create-target-group --name "$web_service" --protocol HTTP --port 3000 --target-type ip --vpc-id "$VPC_ID" --health-check-path / --matcher HttpCode=200-399 --query 'TargetGroups[0].TargetGroupArn' --output text)
 fi
-ensure_service "$web_service" "$web_task" "$network_web" "" "$target_group_arn"
 
+# Associate the target group with the ALB before ECS CreateService validates it.
 if ! aws elbv2 describe-rules --listener-arn "$ALB_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']] | length(@)" --output text | grep -q '^1$'; then
   priority=$((1000 + pr_number))
   aws elbv2 create-rule --listener-arn "$ALB_LISTENER_ARN" --priority "$priority" --conditions "Field=host-header,Values=${host}" --actions "Type=forward,TargetGroupArn=${target_group_arn}" >/dev/null
 fi
+if [[ -n "${ALB_HTTPS_LISTENER_ARN:-}" ]] && ! aws elbv2 describe-rules --listener-arn "$ALB_HTTPS_LISTENER_ARN" --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='${host}']] | length(@)" --output text | grep -q '^1$'; then
+  priority=$((1000 + pr_number))
+  aws elbv2 create-rule --listener-arn "$ALB_HTTPS_LISTENER_ARN" --priority "$priority" --conditions "Field=host-header,Values=${host}" --actions "Type=forward,TargetGroupArn=${target_group_arn}" >/dev/null
+fi
+
+ensure_service "$web_service" "$web_task" "$network_web" "" "$target_group_arn"
 
 # The token must be stored as {"token":"..."} in Secrets Manager. The record
 # is proxied so Cloudflare provides TLS and keeps the ALB hostname private.
 record=$(curl -fsS -X GET "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/dns_records?type=CNAME&name=${host}" -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" | jq -r '.result[0].id // empty')
-payload=$(jq -nc --arg name "pr-${pr_number}" --arg content "${ALB_DNS_NAME}" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')
+payload=$(jq -nc --arg name "$host" --arg content "${ALB_DNS_NAME}" '{type:"CNAME",name:$name,content:$content,proxied:true,ttl:1}')
 if [[ -n "$record" ]]; then
   curl -fsS -X PUT "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${record}" -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" -H 'Content-Type: application/json' --data "$payload" >/dev/null
 else
