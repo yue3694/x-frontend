@@ -74,6 +74,13 @@ fi
 
 ensure_service "$web_service" "$web_task" "$network_web" "" "$target_group_arn"
 
+# Do not report the preview as ready while the previous task revision is still
+# serving traffic. This makes the GitHub PR Check represent the actual rollout
+# state of both services, not merely successful ECS API calls.
+aws ecs wait services-stable \
+  --cluster "$ECS_CLUSTER" \
+  --services "$api_service" "$web_service"
+
 # The token must be stored as {"token":"..."} in Secrets Manager. The record
 # is proxied so Cloudflare provides TLS and keeps the ALB hostname private.
 record=$(curl -fsS -X GET "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/dns_records?type=CNAME&name=${host}" -H "Authorization: Bearer ${CLOUDFLARE_TOKEN}" | jq -r '.result[0].id // empty')
