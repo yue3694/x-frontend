@@ -54,7 +54,7 @@ export default async function Home() {
 
   return (
     <main className="landing-shell">
-      <div className="grid" />
+      <div className="landing-grid" />
       <LandingNav user={user} />
 
       <section className="hero">

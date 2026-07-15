@@ -297,7 +297,7 @@ nav.app-nav { display: flex; justify-content: space-between; align-items: center
 }
 
 /* ---- Aliases / extra utilities ---- */
-.grid {
+.landing-grid {
   position: fixed;
   inset: 0;
   pointer-events: none;

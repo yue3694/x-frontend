@@ -29,7 +29,7 @@ export default async function ProfilePage() {
       <CursorGlow />
       <BackgroundLayer />
       <MicroParticles />
-      <ProfileNav user={user} />
+      <ProfileNav />
       <ScrollProgress />
 
       <main className="scroll-container" id="scrollContainer">

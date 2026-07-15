@@ -7,7 +7,7 @@ const demoAvatarURL = "https://lh3.googleusercontent.com/aida-public/AB6AXuCy745
 var demoProfile = Profile{
 	Headline:     "陈傲 (Alex Chen)",
 	Subheadline:  "首席 AI 工程师 // 全栈系统架构师",
-	Quote:        "将生物学意图与合成智能相融合",
+	Quote:        `"将生物学意图与合成智能相融合" (Merging Biological Intent with Synthetic Intelligence)`,
 	Email:        "alex@X-FRONTEND.ai",
 	Location:     "硅谷，加利福尼亚",
 	Availability: "接受新项目",
@@ -20,7 +20,7 @@ var demoProfile = Profile{
 	},
 	Skills: []SkillCategory{
 		{
-			Category: "AI 核心",
+			Category: "AI 核心 (AI Core)",
 			Icon:     "psychology",
 			Color:    "secondary",
 			Items: []SkillItem{
@@ -30,7 +30,7 @@ var demoProfile = Profile{
 			MasteryNote: "大规模语言模型分布式预训练与推理优化",
 		},
 		{
-			Category: "全栈",
+			Category: "全栈 (Full-Stack)",
 			Icon:     "dns",
 			Color:    "tertiary",
 			Items: []SkillItem{
@@ -40,7 +40,7 @@ var demoProfile = Profile{
 			MasteryNote: "高并发实时数据流处理与云原生架构演进",
 		},
 		{
-			Category: "产品 & 设计",
+			Category: "产品 & 设计 (Product)",
 			Icon:     "design_services",
 			Color:    "primary",
 			Items: []SkillItem{
@@ -86,7 +86,7 @@ var demoProfile = Profile{
 		{DateRange: "2023 - 至今", Role: "AI 产品设计负责人 @ Synth_Corp", Tags: []string{"AI UI/UX", "产品策略"}, Bullets: []string{"领导多模态交互界面的设计与开发工作。", "制定 Agentic 系统的产品迭代路线图。", "统筹全栈工程团队与设计团队协同，落地 Neural UI。"}, Marker: "primary-dot"},
 		{DateRange: "2021 - 2023", Role: "首席 AI 架构师 @ Neural Corp", Tags: []string{"工业级大模型部署", "分布式系统"}, Bullets: []string{"架构并扩展了万卡级别的分布式 LLM 推理集群。", "领导 'Project Aegis' 的开发，一个高度自主的 DevOps Agent。", "研发自定义 CUDA 算子，在不损失精度的情况下将核心模型延迟降低 45%。"}, Marker: "primary-dot-strong"},
 		{DateRange: "2021", Role: "人工智能理学硕士 (MS in AI) @ 斯坦福大学 (Stanford University)", Tags: nil, Bullets: []string{"研究方向：多模态表征学习与强化学习。", "系统核心升级完成，知识库扩容成功。"}, Marker: "secondary-diamond"},
-		{DateRange: "2019 - 2021", Role: "全栈开发工程师 @ CyberTech", Tags: []string{"微服务架构", "实时数据处理"}, Bullets: []string{"架构了用于实时威胁检测的高并发 React/Node.js 仪表板。", "实现并维护服务于每日 1000 万次请求的 GraphQL API 层。", "主导将核心遗留单体架构平滑过渡到基于 Go 的云原生微服务体系。"}, Marker: "tertiary-dot"},
+		{DateRange: "2019 - 2021", Role: "全栈开发工程师 @ CyberTech", Tags: []string{"微服务架构", "实时数据处理"}, Bullets: []string{"架构了用于实时威胁检测的高并发 React/Node.js 仪表板。", "实现并维护服务于每日 1000 万次以上请求的 GraphQL API 层。", "主导将核心遗留单体架构平滑过渡到基于 Go 的云原生微服务体系。"}, Marker: "tertiary-dot"},
 		{DateRange: "2019", Role: "计算机科学学士 (BS in CS) @ 麻省理工学院 (MIT)", Tags: nil, Bullets: []string{"基础架构模块初始化完成。", "算法与数据结构基底烧录完毕。"}, Marker: "outline-diamond"},
 	},
 }
