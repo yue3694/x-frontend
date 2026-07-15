@@ -5,6 +5,33 @@ locals {
 
 data "aws_caller_identity" "current" {}
 
+# ECS tasks may be placed in any configured private-subnet AZ. Ensure the ALB
+# also spans those AZs, otherwise a healthy task can be rejected with
+# "Availability Zone is not enabled for the load balancer".
+data "aws_subnet" "private" {
+  for_each = toset(var.private_subnet_ids)
+  id       = each.value
+}
+
+data "aws_subnets" "alb_az_coverage" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+  filter {
+    name   = "availability-zone"
+    values = distinct([for subnet in data.aws_subnet.private : subnet.availability_zone])
+  }
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
+  }
+}
+
+locals {
+  alb_subnet_ids = distinct(concat(var.public_subnet_ids, data.aws_subnets.alb_az_coverage.ids))
+}
+
 resource "aws_ecr_repository" "api" {
   name                 = "${local.name}/api"
   image_tag_mutability = "MUTABLE"
@@ -136,7 +163,7 @@ resource "aws_lb" "web" {
   name               = substr("${local.name}-web", 0, 32)
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = var.public_subnet_ids
+  subnets            = local.alb_subnet_ids
 }
 resource "aws_lb_target_group" "web" {
   name                 = substr("${local.name}-web", 0, 32)
