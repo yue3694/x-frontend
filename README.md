@@ -143,3 +143,6 @@ panel. Fork PRs are skipped. Closing a PR runs the same workflow with the
 cleanup action.
 
 Copy `infra/terraform/terraform.tfvars.example` to `terraform.tfvars`, fill in the VPC/subnets, secret ARNs, Cloudflare Zone, preview domain, and trusted GitHub actor ID. Private subnets require NAT or VPC endpoints for ECR, Secrets Manager and CloudWatch Logs.
+
+## CI Flow
+![CI 部署架构图](./ci_deploy.png)
