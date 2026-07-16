@@ -66,7 +66,7 @@ export function IdentityCore({ profile }: { profile: Profile }) {
             </div>
           </RevealOnScroll>
           <RevealOnScroll delay={100}>
-            <h1 className="font-headline-xl text-on-surface font-bold tracking-tight">
+            <h1 className="font-headline-xl text-5xl md:text-6xl text-on-surface font-bold tracking-tight">
               {headline.primary}{" "}
               {headline.secondary && (
                 <span className="text-on-surface-variant font-light">({headline.secondary})</span>

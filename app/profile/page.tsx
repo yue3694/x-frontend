@@ -10,6 +10,7 @@ import { ScrollProgress } from "@/app/components/profile/ScrollProgress";
 import { CursorGlow } from "@/app/components/profile/CursorGlow";
 import { RevealOnScroll } from "@/app/components/profile/RevealOnScroll";
 import { BackgroundLayer } from "@/app/components/profile/BackgroundLayer";
+import { MicroParticles } from "@/app/components/profile/MicroParticles";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +24,12 @@ export default async function ProfilePage() {
   const { profile } = data;
 
   return (
-    <>
+    <div className="profile-shell">
       <div className="grid-overlay" aria-hidden />
       <CursorGlow />
       <BackgroundLayer />
-      <ProfileNav user={user} />
+      <MicroParticles />
+      <ProfileNav />
       <ScrollProgress />
 
       <main className="scroll-container" id="scrollContainer">
@@ -79,6 +81,6 @@ export default async function ProfilePage() {
           </div>
         </section>
       </main>
-    </>
+    </div>
   );
 }

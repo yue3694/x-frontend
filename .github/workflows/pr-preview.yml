@@ -1,0 +1,139 @@
+name: PR Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  # Let deployments finish in event order. Cancelling a workflow does not
+  # cancel the CodeBuild job it already started and could cause races.
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  CODEBUILD_PROJECT: ${{ vars.CODEBUILD_PREVIEW_PROJECT }}
+  PREVIEW_DOMAIN: ${{ vars.PREVIEW_DOMAIN }}
+
+jobs:
+  preview:
+    name: AWS PR Preview
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-pr-${{ github.event.pull_request.number }}
+
+      - name: Start CodeBuild deployment
+        id: start
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_REF: ${{ github.event.pull_request.head.ref }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_ACTION" == "closed" ]]; then
+            PR_ACTION="closed"
+          else
+            PR_ACTION="build"
+          fi
+
+          OVERRIDES=$(jq -cn \
+            --arg number "$PR_NUMBER" \
+            --arg ref "$PR_REF" \
+            --arg sha "$PR_SHA" \
+            --arg action "$PR_ACTION" \
+            '[
+              {name:"PR_NUMBER", value:$number, type:"PLAINTEXT"},
+              {name:"PR_REF", value:$ref, type:"PLAINTEXT"},
+              {name:"PR_SHA", value:$sha, type:"PLAINTEXT"},
+              {name:"PR_ACTION", value:$action, type:"PLAINTEXT"}
+            ]')
+
+          BUILD_ID=$(aws codebuild start-build \
+            --project-name "$CODEBUILD_PROJECT" \
+            --source-version "$PR_SHA" \
+            --environment-variables-override "$OVERRIDES" \
+            --query 'build.id' \
+            --output text)
+
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "pr_action=$PR_ACTION" >> "$GITHUB_OUTPUT"
+          echo "preview_url=https://pr-${PR_NUMBER}.${PREVIEW_DOMAIN}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for CodeBuild and publish status
+        shell: bash
+        env:
+          BUILD_ID: ${{ steps.start.outputs.build_id }}
+          PR_ACTION: ${{ steps.start.outputs.pr_action }}
+          PREVIEW_URL: ${{ steps.start.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+
+          STATUS="IN_PROGRESS"
+          BUILD_JSON=""
+          for attempt in $(seq 1 130); do
+            BUILD_JSON=$(aws codebuild batch-get-builds --ids "$BUILD_ID" --output json)
+            STATUS=$(jq -r '.builds[0].buildStatus' <<<"$BUILD_JSON")
+            PHASE=$(jq -r '.builds[0].currentPhase // "UNKNOWN"' <<<"$BUILD_JSON")
+            echo "CodeBuild status=$STATUS phase=$PHASE"
+
+            if [[ "$STATUS" != "IN_PROGRESS" ]]; then
+              break
+            fi
+            sleep 15
+          done
+
+          LOG_URL=$(jq -r '.builds[0].logs.deepLink // ""' <<<"$BUILD_JSON")
+          {
+            echo "## AWS PR Preview"
+            echo
+            echo "- CodeBuild: \`$BUILD_ID\`"
+            echo "- Status: **$STATUS**"
+            [[ -n "$LOG_URL" ]] && echo "- [AWS build logs]($LOG_URL)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$STATUS" != "SUCCEEDED" ]]; then
+            echo "### Failed phases" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '
+              .builds[0].phases[]
+              | select(.phaseStatus == "FAILED" or .phaseStatus == "FAULT" or .phaseStatus == "TIMED_OUT")
+              | "- **\(.phaseType)**: \([.contexts[]?.message] | join("; "))"
+            ' <<<"$BUILD_JSON" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          if [[ "$PR_ACTION" == "closed" ]]; then
+            echo "- Preview environment removed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # CodeBuild waits for ECS stability. This final public check also
+          # confirms the ALB and Cloudflare route are usable by reviewers.
+          HTTP_STATUS="000"
+          for attempt in $(seq 1 12); do
+            HTTP_STATUS=$(curl --silent --show-error --output /dev/null \
+              --write-out '%{http_code}' "$PREVIEW_URL" || true)
+            [[ "$HTTP_STATUS" == "200" ]] && break
+            sleep 5
+          done
+
+          echo "- Preview: [$PREVIEW_URL]($PREVIEW_URL)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Public health check: **HTTP $HTTP_STATUS**" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$HTTP_STATUS" == "200" ]]

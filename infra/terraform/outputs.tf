@@ -14,5 +14,6 @@ output "ecr_repositories" {
   }
 }
 output "codebuild_project" { value = aws_codebuild_project.pr_preview.name }
+output "github_actions_preview_role_arn" { value = aws_iam_role.github_actions_preview.arn }
 output "trigger_function_url" { value = try(aws_lambda_function_url.trigger[0].function_url, null) }
 output "trigger_function_name" { value = try(aws_lambda_function.trigger[0].function_name, null) }

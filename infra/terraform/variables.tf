@@ -14,6 +14,11 @@ variable "vpc_id" { type = string }
 variable "public_subnet_ids" { type = list(string) }
 variable "private_subnet_ids" { type = list(string) }
 variable "github_repo_url" { type = string }
+variable "github_repository" {
+  description = "GitHub repository in owner/name form allowed to assume the Actions OIDC role."
+  type        = string
+  default     = "yue3694/x-frontend"
+}
 variable "github_pat_secret_arn" {
   description = "Secrets Manager ARN whose secret_string is a raw GitHub PAT (no JSON wrapper). Used by aws_codebuild_source_credential to clone the repo on PR builds."
   type        = string

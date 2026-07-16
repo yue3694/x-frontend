@@ -1,12 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { orpcClient } from "@/lib/orpc/client";
-import type { SessionUser } from "@/lib/go-api";
 
-export function ProfileNav({ user }: { user: SessionUser }) {
-  const router = useRouter();
-
+export function ProfileNav() {
   async function handleLogout() {
     try {
       await orpcClient.auth.logout({});
@@ -37,17 +33,18 @@ export function ProfileNav({ user }: { user: SessionUser }) {
           </a>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 bg-surface-variant/30 rounded-full border border-white/5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-surface-variant/30 rounded-full border border-white/5">
             <span className="w-2 h-2 bg-success-green rounded-full pulse-dot" />
-            <span className="font-mono text-xs text-on-surface-variant truncate max-w-[160px]">
-              {user.Email}
+            <span className="font-code-sm text-xs text-on-surface-variant">
+              API: 在线
             </span>
           </div>
           <button
             onClick={handleLogout}
-            className="px-3 py-1 text-xs font-mono text-on-surface-variant border border-white/10 rounded hover:border-error hover:text-error transition-colors"
+            aria-label="退出登录"
+            className="w-8 h-8 text-on-surface-variant border border-white/10 rounded flex items-center justify-center hover:border-error hover:text-error transition-colors"
           >
-            LOGOUT
+            <span className="material-symbols-outlined text-[16px]">logout</span>
           </button>
         </div>
       </div>
